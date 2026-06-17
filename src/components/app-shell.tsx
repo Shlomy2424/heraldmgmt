@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean };
+const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/work-orders", label: "Work Orders", icon: ClipboardList },
   { to: "/schedule", label: "Schedule", icon: CalendarDays },
@@ -20,7 +21,7 @@ const NAV = [
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/import-export", label: "Import/Export", icon: Upload },
   { to: "/users", label: "Users & Roles", icon: Settings, adminOnly: true },
-] as const;
+];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { profile, signOut, hasRole, loading } = useAuth();
