@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     nav({ to: "/auth", replace: true });
   }
 
-  const items = NAV.filter((n) => !n.adminOnly || hasRole(["admin", "manager"]));
+  const items = NAV.filter((n) => !n.adminOnly || hasRole(["admin"]));
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
