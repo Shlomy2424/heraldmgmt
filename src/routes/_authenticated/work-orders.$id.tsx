@@ -188,11 +188,17 @@ function WODetail() {
             <CardContent>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value=""; }} />
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {(photos ?? []).map((p: any) => (
-                  <a key={p.id} href={p.file_url} target="_blank" rel="noreferrer" className="block aspect-square bg-muted rounded overflow-hidden">
-                    <img src={p.file_url} alt={p.file_name ?? ""} className="size-full object-cover"/>
-                  </a>
+                  <div key={p.id} className="space-y-1">
+                    <a href={p.display_url} target="_blank" rel="noreferrer" className="block aspect-square bg-muted rounded overflow-hidden">
+                      <img src={p.display_url} alt={p.file_name ?? ""} className="size-full object-cover" loading="lazy"/>
+                    </a>
+                    <div className="text-[11px] leading-tight text-muted-foreground">
+                      <div className="truncate"><b className="text-foreground">{p.uploader?.name ?? p.uploader?.email ?? "Unknown"}</b></div>
+                      <div>{format(new Date(p.created_at), "MMM d, yyyy h:mm a")}</div>
+                    </div>
+                  </div>
                 ))}
                 {photos?.length === 0 && <div className="col-span-full text-sm text-muted-foreground text-center py-6 flex flex-col items-center gap-2"><ImageIcon className="size-6"/> No photos yet</div>}
               </div>
