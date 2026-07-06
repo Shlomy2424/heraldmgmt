@@ -89,20 +89,32 @@ function WODetail() {
   }
   async function addNote() {
     if (!note.trim()) return;
+    if (!user?.id) { toast.error("Not signed in"); return; }
     const { error } = await supabase.from("job_notes").insert({
-      work_order_id: id, note_text: note, note_type: noteType, created_by: user?.id,
+      work_order_id: id, note_text: note.trim(), note_type: noteType, created_by: user.id,
     });
     if (error) toast.error(error.message); else { setNote(""); qc.invalidateQueries({ queryKey: ["job-notes", id] }); }
   }
   async function uploadPhoto(file: File) {
-    const path = `${id}/${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from("work-order-photos").upload(path, file);
+    if (!user?.id) { toast.error("Not signed in"); return; }
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("work-order-photos").upload(path, file, { contentType: file.type });
     if (upErr) { toast.error(upErr.message); return; }
-    const { data: sign } = await supabase.storage.from("work-order-photos").createSignedUrl(path, 3600 * 24 * 365);
-    await supabase.from("photos").insert({
-      work_order_id: id, file_url: sign?.signedUrl ?? path, file_name: file.name,
-      file_type: file.type, uploaded_by: user?.id, photo_category: "during",
+    const { error: insErr } = await supabase.from("photos").insert({
+      work_order_id: id,
+      storage_path: path,
+      file_name: file.name,
+      file_type: file.type,
+      uploaded_by: user.id,
+      photo_category: "during",
     });
+    if (insErr) {
+      // clean up orphaned upload
+      await supabase.storage.from("work-order-photos").remove([path]);
+      toast.error(insErr.message);
+      return;
+    }
     toast.success("Photo uploaded");
     qc.invalidateQueries({ queryKey: ["photos", id] });
   }
