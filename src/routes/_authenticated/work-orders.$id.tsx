@@ -42,11 +42,25 @@ function WODetail() {
 
   const { data: notes } = useQuery({
     queryKey: ["job-notes", id],
-    queryFn: async () => (await supabase.from("job_notes").select("*,profile:profiles(name)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("job_notes").select("*,profile:profiles(name,email)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
   });
   const { data: photos } = useQuery({
     queryKey: ["photos", id],
-    queryFn: async () => (await supabase.from("photos").select("*").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => {
+      const { data } = await supabase.from("photos")
+        .select("*,uploader:profiles!photos_uploaded_by_fkey(name,email)")
+        .eq("work_order_id", id).order("created_at", { ascending: false });
+      const rows = data ?? [];
+      // Resolve signed URLs for storage_path-backed photos; fall back to file_url for legacy rows.
+      const out = await Promise.all(rows.map(async (p: any) => {
+        if (p.storage_path) {
+          const { data: s } = await supabase.storage.from("work-order-photos").createSignedUrl(p.storage_path, 3600);
+          return { ...p, display_url: s?.signedUrl ?? p.file_url };
+        }
+        return { ...p, display_url: p.file_url };
+      }));
+      return out;
+    },
   });
   const { data: history } = useQuery({
     queryKey: ["status-history", id],
