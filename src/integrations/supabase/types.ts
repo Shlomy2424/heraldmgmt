@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          name: string | null
+          phone: string | null
+          revoked_at: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          name?: string | null
+          phone?: string | null
+          revoked_at?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          name?: string | null
+          phone?: string | null
+          revoked_at?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          record_id: string | null
+          table_name: string | null
+          user_id: string | null
+          work_order_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          record_id?: string | null
+          table_name?: string | null
+          user_id?: string | null
+          work_order_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          record_id?: string | null
+          table_name?: string | null
+          user_id?: string | null
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dropdown_options: {
         Row: {
           active: boolean
@@ -174,10 +275,11 @@ export type Database = {
           description: string | null
           file_name: string | null
           file_type: string | null
-          file_url: string
+          file_url: string | null
           id: string
           photo_category: Database["public"]["Enums"]["photo_category"]
           schedule_visit_id: string | null
+          storage_path: string | null
           uploaded_by: string | null
           work_order_id: string
         }
@@ -186,10 +288,11 @@ export type Database = {
           description?: string | null
           file_name?: string | null
           file_type?: string | null
-          file_url: string
+          file_url?: string | null
           id?: string
           photo_category?: Database["public"]["Enums"]["photo_category"]
           schedule_visit_id?: string | null
+          storage_path?: string | null
           uploaded_by?: string | null
           work_order_id: string
         }
@@ -198,10 +301,11 @@ export type Database = {
           description?: string | null
           file_name?: string | null
           file_type?: string | null
-          file_url?: string
+          file_url?: string | null
           id?: string
           photo_category?: Database["public"]["Enums"]["photo_category"]
           schedule_visit_id?: string | null
+          storage_path?: string | null
           uploaded_by?: string | null
           work_order_id?: string
         }
@@ -791,9 +895,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_work_order: { Args: { _wo: string }; Returns: boolean }
+      can_write_work_order: { Args: { _wo: string }; Returns: boolean }
       current_user_roles: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      get_invite_by_token: {
+        Args: { _token: string }
+        Returns: {
+          accepted_at: string
+          email: string
+          expires_at: string
+          id: string
+          name: string
+          revoked_at: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
       }
       has_any_role: {
         Args: {
