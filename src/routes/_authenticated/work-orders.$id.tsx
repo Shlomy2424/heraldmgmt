@@ -42,11 +42,25 @@ function WODetail() {
 
   const { data: notes } = useQuery({
     queryKey: ["job-notes", id],
-    queryFn: async () => (await supabase.from("job_notes").select("*,profile:profiles(name)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("job_notes").select("*,profile:profiles(name,email)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
   });
   const { data: photos } = useQuery({
     queryKey: ["photos", id],
-    queryFn: async () => (await supabase.from("photos").select("*").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => {
+      const { data } = await supabase.from("photos")
+        .select("*,uploader:profiles!photos_uploaded_by_fkey(name,email)")
+        .eq("work_order_id", id).order("created_at", { ascending: false });
+      const rows = data ?? [];
+      // Resolve signed URLs for storage_path-backed photos; fall back to file_url for legacy rows.
+      const out = await Promise.all(rows.map(async (p: any) => {
+        if (p.storage_path) {
+          const { data: s } = await supabase.storage.from("work-order-photos").createSignedUrl(p.storage_path, 3600);
+          return { ...p, display_url: s?.signedUrl ?? p.file_url };
+        }
+        return { ...p, display_url: p.file_url };
+      }));
+      return out;
+    },
   });
   const { data: history } = useQuery({
     queryKey: ["status-history", id],
@@ -75,20 +89,32 @@ function WODetail() {
   }
   async function addNote() {
     if (!note.trim()) return;
+    if (!user?.id) { toast.error("Not signed in"); return; }
     const { error } = await supabase.from("job_notes").insert({
-      work_order_id: id, note_text: note, note_type: noteType, created_by: user?.id,
+      work_order_id: id, note_text: note.trim(), note_type: noteType, created_by: user.id,
     });
     if (error) toast.error(error.message); else { setNote(""); qc.invalidateQueries({ queryKey: ["job-notes", id] }); }
   }
   async function uploadPhoto(file: File) {
-    const path = `${id}/${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from("work-order-photos").upload(path, file);
+    if (!user?.id) { toast.error("Not signed in"); return; }
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("work-order-photos").upload(path, file, { contentType: file.type });
     if (upErr) { toast.error(upErr.message); return; }
-    const { data: sign } = await supabase.storage.from("work-order-photos").createSignedUrl(path, 3600 * 24 * 365);
-    await supabase.from("photos").insert({
-      work_order_id: id, file_url: sign?.signedUrl ?? path, file_name: file.name,
-      file_type: file.type, uploaded_by: user?.id, photo_category: "during",
+    const { error: insErr } = await supabase.from("photos").insert({
+      work_order_id: id,
+      storage_path: path,
+      file_name: file.name,
+      file_type: file.type,
+      uploaded_by: user.id,
+      photo_category: "during",
     });
+    if (insErr) {
+      // clean up orphaned upload
+      await supabase.storage.from("work-order-photos").remove([path]);
+      toast.error(insErr.message);
+      return;
+    }
     toast.success("Photo uploaded");
     qc.invalidateQueries({ queryKey: ["photos", id] });
   }
@@ -139,7 +165,7 @@ function WODetail() {
                 {(notes ?? []).map((n: any) => (
                   <div key={n.id} className="py-2">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span><b className="text-foreground">{n.profile?.name ?? "Unknown"}</b> • {n.note_type}</span>
+                      <span><b className="text-foreground">{n.profile?.name ?? n.profile?.email ?? "Unknown"}</b> • {n.note_type}</span>
                       <span>{format(new Date(n.created_at), "MMM d, h:mm a")}</span>
                     </div>
                     <div className="text-sm whitespace-pre-wrap">{n.note_text}</div>
@@ -162,11 +188,17 @@ function WODetail() {
             <CardContent>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value=""; }} />
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {(photos ?? []).map((p: any) => (
-                  <a key={p.id} href={p.file_url} target="_blank" rel="noreferrer" className="block aspect-square bg-muted rounded overflow-hidden">
-                    <img src={p.file_url} alt={p.file_name ?? ""} className="size-full object-cover"/>
-                  </a>
+                  <div key={p.id} className="space-y-1">
+                    <a href={p.display_url} target="_blank" rel="noreferrer" className="block aspect-square bg-muted rounded overflow-hidden">
+                      <img src={p.display_url} alt={p.file_name ?? ""} className="size-full object-cover" loading="lazy"/>
+                    </a>
+                    <div className="text-[11px] leading-tight text-muted-foreground">
+                      <div className="truncate"><b className="text-foreground">{p.uploader?.name ?? p.uploader?.email ?? "Unknown"}</b></div>
+                      <div>{format(new Date(p.created_at), "MMM d, yyyy h:mm a")}</div>
+                    </div>
+                  </div>
                 ))}
                 {photos?.length === 0 && <div className="col-span-full text-sm text-muted-foreground text-center py-6 flex flex-col items-center gap-2"><ImageIcon className="size-6"/> No photos yet</div>}
               </div>

@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import {
   Building2, LayoutDashboard, ClipboardList, CalendarDays, Building,
-  Home, Users, Wrench, BarChart3, Upload, Settings, LogOut, Menu, X, Bell,
+  Home, Users, Wrench, BarChart3, Upload, Settings, LogOut, Menu, X, Activity,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,8 @@ const NAV: NavItem[] = [
   { to: "/technician", label: "Tech View", icon: Wrench },
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/import-export", label: "Import/Export", icon: Upload },
-  { to: "/users", label: "Users & Roles", icon: Settings, adminOnly: true },
+  { to: "/activity", label: "Activity Log", icon: Activity, adminOnly: true },
+  { to: "/users", label: "Users & Invites", icon: Settings, adminOnly: true },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -34,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     nav({ to: "/auth", replace: true });
   }
 
-  const items = NAV.filter((n) => !n.adminOnly || hasRole(["admin", "manager"]));
+  const items = NAV.filter((n) => !n.adminOnly || hasRole(["admin"]));
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;

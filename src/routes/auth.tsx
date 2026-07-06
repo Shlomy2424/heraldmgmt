@@ -17,10 +17,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const nav = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -33,22 +31,11 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin, data: { name } },
-        });
-        if (error) throw error;
-        toast.success("Account created");
-        nav({ to: "/dashboard" });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        nav({ to: "/dashboard" });
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      nav({ to: "/dashboard" });
     } catch (err: any) {
-      toast.error(err.message ?? "Authentication failed");
+      toast.error(err.message ?? "Sign-in failed");
     } finally {
       setBusy(false);
     }
@@ -59,6 +46,15 @@ function AuthPage() {
     const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
     if ((res as any).error) toast.error("Google sign-in failed");
     setBusy(false);
+  }
+
+  async function forgotPassword() {
+    if (!email) { toast.error("Enter your email first"); return; }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password",
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Password reset email sent");
   }
 
   return (
@@ -72,9 +68,9 @@ function AuthPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>{mode === "signin" ? "Welcome back" : "Create account"}</CardTitle>
+            <CardTitle>Sign in</CardTitle>
             <CardDescription>
-              {mode === "signin" ? "Sign in to manage work orders" : "Get started — the first user becomes admin"}
+              This system is invite-only. Ask an administrator for an invite link if you don't have an account.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -86,31 +82,21 @@ function AuthPage() {
               <div className="absolute inset-x-0 top-1/2 h-px bg-border -z-0" />
             </div>
             <form onSubmit={submit} className="space-y-3">
-              {mode === "signup" && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="name">Full name</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-                </div>
-              )}
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <button type="button" onClick={forgotPassword} className="text-xs text-muted-foreground hover:text-foreground">
+                    Forgot?
+                  </button>
+                </div>
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
               </div>
-              <Button type="submit" className="w-full" disabled={busy}>
-                {mode === "signin" ? "Sign in" : "Create account"}
-              </Button>
+              <Button type="submit" className="w-full" disabled={busy}>Sign in</Button>
             </form>
-            <button
-              type="button"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-              className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
-            >
-              {mode === "signin" ? "Need an account? Sign up" : "Have an account? Sign in"}
-            </button>
           </CardContent>
         </Card>
         <p className="text-xs text-muted-foreground text-center mt-4">
