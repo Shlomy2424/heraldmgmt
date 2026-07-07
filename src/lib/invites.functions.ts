@@ -134,6 +134,42 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const acceptInviteWithPassword = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token: z.string().min(1), password: z.string().min(8) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: invite, error: inviteErr } = await supabaseAdmin
+      .from("account_invites")
+      .select("id,email,name,role,token,accepted_at,revoked_at,expires_at")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (inviteErr) throw new Error(inviteErr.message);
+    if (!invite) throw new Error("Invite not found");
+    if (invite.revoked_at) throw new Error("This invite was revoked.");
+    if (invite.accepted_at) throw new Error("This invite has already been accepted. Please sign in.");
+    if (new Date(invite.expires_at) < new Date()) throw new Error("This invite has expired.");
+
+    const email = invite.email.trim().toLowerCase();
+    const { data: users, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (listErr) throw new Error(listErr.message);
+    const authUser = users.users.find((u) => u.email?.toLowerCase() === email);
+    if (authUser) {
+      throw new Error("User already exists. Use reset password or deactivate/reinvite.");
+    }
+
+    const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { invite_token: data.token, name: invite.name ?? undefined },
+    });
+    if (createErr) throw new Error(createErr.message);
+    if (!created.user) throw new Error("Account could not be created.");
+
+    return { ok: true, email };
+  });
+
 export const createInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
