@@ -17,12 +17,12 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedTechnicianRouteImport } from './routes/_authenticated/technician'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
-import { Route as AuthenticatedPropertiesRouteImport } from './routes/_authenticated/properties'
 import { Route as AuthenticatedImportExportRouteImport } from './routes/_authenticated/import-export'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated/activity'
 import { Route as AuthenticatedWorkOrdersIndexRouteImport } from './routes/_authenticated/work-orders.index'
 import { Route as AuthenticatedUnitsIndexRouteImport } from './routes/_authenticated/units.index'
+import { Route as AuthenticatedPropertiesIndexRouteImport } from './routes/_authenticated/properties.index'
 import { Route as AuthenticatedWorkOrdersNewRouteImport } from './routes/_authenticated/work-orders.new'
 import { Route as AuthenticatedWorkOrdersIdRouteImport } from './routes/_authenticated/work-orders.$id'
 import { Route as AuthenticatedPropertiesIdRouteImport } from './routes/_authenticated/properties.$id'
@@ -66,11 +66,6 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedPropertiesRoute = AuthenticatedPropertiesRouteImport.update({
-  id: '/properties',
-  path: '/properties',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedImportExportRoute =
   AuthenticatedImportExportRouteImport.update({
     id: '/import-export',
@@ -98,6 +93,12 @@ const AuthenticatedUnitsIndexRoute = AuthenticatedUnitsIndexRouteImport.update({
   path: '/units/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPropertiesIndexRoute =
+  AuthenticatedPropertiesIndexRouteImport.update({
+    id: '/properties/',
+    path: '/properties/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedWorkOrdersNewRoute =
   AuthenticatedWorkOrdersNewRouteImport.update({
     id: '/work-orders/new',
@@ -112,9 +113,9 @@ const AuthenticatedWorkOrdersIdRoute =
   } as any)
 const AuthenticatedPropertiesIdRoute =
   AuthenticatedPropertiesIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedPropertiesRoute,
+    id: '/properties/$id',
+    path: '/properties/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -124,7 +125,6 @@ export interface FileRoutesByFullPath {
   '/activity': typeof AuthenticatedActivityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import-export': typeof AuthenticatedImportExportRoute
-  '/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/technician': typeof AuthenticatedTechnicianRoute
@@ -132,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
+  '/properties/': typeof AuthenticatedPropertiesIndexRoute
   '/units/': typeof AuthenticatedUnitsIndexRoute
   '/work-orders/': typeof AuthenticatedWorkOrdersIndexRoute
 }
@@ -142,7 +143,6 @@ export interface FileRoutesByTo {
   '/activity': typeof AuthenticatedActivityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import-export': typeof AuthenticatedImportExportRoute
-  '/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/technician': typeof AuthenticatedTechnicianRoute
@@ -150,6 +150,7 @@ export interface FileRoutesByTo {
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
+  '/properties': typeof AuthenticatedPropertiesIndexRoute
   '/units': typeof AuthenticatedUnitsIndexRoute
   '/work-orders': typeof AuthenticatedWorkOrdersIndexRoute
 }
@@ -162,7 +163,6 @@ export interface FileRoutesById {
   '/_authenticated/activity': typeof AuthenticatedActivityRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/import-export': typeof AuthenticatedImportExportRoute
-  '/_authenticated/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/technician': typeof AuthenticatedTechnicianRoute
@@ -170,6 +170,7 @@ export interface FileRoutesById {
   '/_authenticated/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/_authenticated/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/_authenticated/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
+  '/_authenticated/properties/': typeof AuthenticatedPropertiesIndexRoute
   '/_authenticated/units/': typeof AuthenticatedUnitsIndexRoute
   '/_authenticated/work-orders/': typeof AuthenticatedWorkOrdersIndexRoute
 }
@@ -182,7 +183,6 @@ export interface FileRouteTypes {
     | '/activity'
     | '/dashboard'
     | '/import-export'
-    | '/properties'
     | '/reports'
     | '/schedule'
     | '/technician'
@@ -190,6 +190,7 @@ export interface FileRouteTypes {
     | '/properties/$id'
     | '/work-orders/$id'
     | '/work-orders/new'
+    | '/properties/'
     | '/units/'
     | '/work-orders/'
   fileRoutesByTo: FileRoutesByTo
@@ -200,7 +201,6 @@ export interface FileRouteTypes {
     | '/activity'
     | '/dashboard'
     | '/import-export'
-    | '/properties'
     | '/reports'
     | '/schedule'
     | '/technician'
@@ -208,6 +208,7 @@ export interface FileRouteTypes {
     | '/properties/$id'
     | '/work-orders/$id'
     | '/work-orders/new'
+    | '/properties'
     | '/units'
     | '/work-orders'
   id:
@@ -219,7 +220,6 @@ export interface FileRouteTypes {
     | '/_authenticated/activity'
     | '/_authenticated/dashboard'
     | '/_authenticated/import-export'
-    | '/_authenticated/properties'
     | '/_authenticated/reports'
     | '/_authenticated/schedule'
     | '/_authenticated/technician'
@@ -227,6 +227,7 @@ export interface FileRouteTypes {
     | '/_authenticated/properties/$id'
     | '/_authenticated/work-orders/$id'
     | '/_authenticated/work-orders/new'
+    | '/_authenticated/properties/'
     | '/_authenticated/units/'
     | '/_authenticated/work-orders/'
   fileRoutesById: FileRoutesById
@@ -296,13 +297,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/properties': {
-      id: '/_authenticated/properties'
-      path: '/properties'
-      fullPath: '/properties'
-      preLoaderRoute: typeof AuthenticatedPropertiesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/import-export': {
       id: '/_authenticated/import-export'
       path: '/import-export'
@@ -338,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUnitsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/properties/': {
+      id: '/_authenticated/properties/'
+      path: '/properties'
+      fullPath: '/properties/'
+      preLoaderRoute: typeof AuthenticatedPropertiesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/work-orders/new': {
       id: '/_authenticated/work-orders/new'
       path: '/work-orders/new'
@@ -354,39 +355,26 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/properties/$id': {
       id: '/_authenticated/properties/$id'
-      path: '/$id'
+      path: '/properties/$id'
       fullPath: '/properties/$id'
       preLoaderRoute: typeof AuthenticatedPropertiesIdRouteImport
-      parentRoute: typeof AuthenticatedPropertiesRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
-
-interface AuthenticatedPropertiesRouteChildren {
-  AuthenticatedPropertiesIdRoute: typeof AuthenticatedPropertiesIdRoute
-}
-
-const AuthenticatedPropertiesRouteChildren: AuthenticatedPropertiesRouteChildren =
-  {
-    AuthenticatedPropertiesIdRoute: AuthenticatedPropertiesIdRoute,
-  }
-
-const AuthenticatedPropertiesRouteWithChildren =
-  AuthenticatedPropertiesRoute._addFileChildren(
-    AuthenticatedPropertiesRouteChildren,
-  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedImportExportRoute: typeof AuthenticatedImportExportRoute
-  AuthenticatedPropertiesRoute: typeof AuthenticatedPropertiesRouteWithChildren
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedTechnicianRoute: typeof AuthenticatedTechnicianRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedPropertiesIdRoute: typeof AuthenticatedPropertiesIdRoute
   AuthenticatedWorkOrdersIdRoute: typeof AuthenticatedWorkOrdersIdRoute
   AuthenticatedWorkOrdersNewRoute: typeof AuthenticatedWorkOrdersNewRoute
+  AuthenticatedPropertiesIndexRoute: typeof AuthenticatedPropertiesIndexRoute
   AuthenticatedUnitsIndexRoute: typeof AuthenticatedUnitsIndexRoute
   AuthenticatedWorkOrdersIndexRoute: typeof AuthenticatedWorkOrdersIndexRoute
 }
@@ -395,13 +383,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedActivityRoute: AuthenticatedActivityRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedImportExportRoute: AuthenticatedImportExportRoute,
-  AuthenticatedPropertiesRoute: AuthenticatedPropertiesRouteWithChildren,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedTechnicianRoute: AuthenticatedTechnicianRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedPropertiesIdRoute: AuthenticatedPropertiesIdRoute,
   AuthenticatedWorkOrdersIdRoute: AuthenticatedWorkOrdersIdRoute,
   AuthenticatedWorkOrdersNewRoute: AuthenticatedWorkOrdersNewRoute,
+  AuthenticatedPropertiesIndexRoute: AuthenticatedPropertiesIndexRoute,
   AuthenticatedUnitsIndexRoute: AuthenticatedUnitsIndexRoute,
   AuthenticatedWorkOrdersIndexRoute: AuthenticatedWorkOrdersIndexRoute,
 }

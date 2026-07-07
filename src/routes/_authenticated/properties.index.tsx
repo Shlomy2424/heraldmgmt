@@ -12,7 +12,7 @@ import { Plus, Building } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 
-export const Route = createFileRoute("/_authenticated/properties")({
+export const Route = createFileRoute("/_authenticated/properties/")({
   head: () => ({ meta: [{ title: "Properties" }] }),
   component: PropertiesPage,
 });
