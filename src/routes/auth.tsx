@@ -11,7 +11,7 @@ import { Building2 } from "lucide-react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 
-const authSearchSchema = z.object({ inactive: fallback(z.string().optional(), undefined).default(undefined) });
+const authSearchSchema = z.object({ inactive: fallback(z.string(), "").default("") });
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
