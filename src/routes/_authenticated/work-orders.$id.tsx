@@ -195,7 +195,7 @@ function WODetail() {
                       <img src={p.display_url} alt={p.file_name ?? ""} className="size-full object-cover" loading="lazy"/>
                     </a>
                     <div className="text-[11px] leading-tight text-muted-foreground">
-                      <div className="truncate"><b className="text-foreground">{p.uploader?.name ?? p.uploader?.email ?? "Unknown"}</b></div>
+                      <div className="truncate"><b className="text-foreground">{p.uploader?.name ?? "Unknown"}</b></div>
                       <div>{format(new Date(p.created_at), "MMM d, yyyy h:mm a")}</div>
                     </div>
                   </div>
