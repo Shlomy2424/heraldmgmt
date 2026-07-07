@@ -9,7 +9,7 @@ type AuthCtx = {
   user: User | null;
   session: Session | null;
   roles: Role[];
-  profile: { name: string; email: string | null } | null;
+  profile: { name: string | null; email: string | null } | null;
   loading: boolean;
   hasRole: (r: Role | Role[]) => boolean;
   signOut: () => Promise<void>;
@@ -26,28 +26,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
-      if (s?.user) {
-        setTimeout(() => loadUserMeta(s.user.id), 0);
-      } else {
-        setRoles([]);
-        setProfile(null);
-      }
+      if (s?.user) setTimeout(() => loadUserMeta(s.user), 0);
+      else { setRoles([]); setProfile(null); }
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-      if (data.session?.user) loadUserMeta(data.session.user.id);
+      if (data.session?.user) loadUserMeta(data.session.user);
       setLoading(false);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  async function loadUserMeta(userId: string) {
+  async function loadUserMeta(u: User) {
     const [{ data: r }, { data: p }] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", userId),
-      supabase.from("profiles").select("name,email").eq("id", userId).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", u.id),
+      supabase.from("profiles").select("name").eq("id", u.id).maybeSingle(),
     ]);
     setRoles((r ?? []).map((x) => x.role));
-    setProfile(p ? { name: p.name, email: p.email } : null);
+    setProfile({ name: p?.name ?? null, email: u.email ?? null });
   }
 
   const hasRole: AuthCtx["hasRole"] = (r) => {
@@ -64,9 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         hasRole,
-        signOut: async () => {
-          await supabase.auth.signOut();
-        },
+        signOut: async () => { await supabase.auth.signOut(); },
       }}
     >
       {children}

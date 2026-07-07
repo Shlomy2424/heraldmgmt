@@ -13,16 +13,22 @@ import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_authenticated/work-orders/new")({
   head: () => ({ meta: [{ title: "New Work Order" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    property_id: (s.property_id as string) ?? "",
+    unit_id: (s.unit_id as string) ?? "",
+    tenant_id: (s.tenant_id as string) ?? "",
+  }),
   component: NewWO,
 });
 
 function NewWO() {
   const nav = useNavigate();
   const { user } = useAuth();
+  const initial = Route.useSearch();
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
     title: "", task_description: "", priority: "normal", category: "",
-    property_id: "", unit_id: "", tenant_id: "", assigned_to: "",
+    property_id: initial.property_id, unit_id: initial.unit_id, tenant_id: initial.tenant_id, assigned_to: "",
   });
 
   const { data: properties } = useQuery({

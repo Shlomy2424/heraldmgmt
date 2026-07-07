@@ -54,7 +54,7 @@ function ActivityPage() {
     queryKey: ["activity", userFilter, actionFilter, tableFilter, from, to],
     queryFn: async () => {
       let q = supabase.from("activity_log")
-        .select("*,profile:profiles(name,email),work_order:work_orders(id,job_number,title)")
+        .select("*,profile:profiles(name),work_order:work_orders(id,job_number,title)")
         .order("created_at", { ascending: false })
         .limit(500);
       if (userFilter) q = q.eq("user_id", userFilter);
@@ -68,8 +68,8 @@ function ActivityPage() {
   });
 
   const { data: profiles } = useQuery({
-    queryKey: ["profiles-list"],
-    queryFn: async () => (await supabase.from("profiles").select("id,name,email").order("name")).data ?? [],
+    queryKey: ["profiles-list-admin"],
+    queryFn: async () => (await supabase.rpc("admin_list_profiles")).data ?? [],
   });
 
   return (
@@ -85,7 +85,7 @@ function ActivityPage() {
             <SelectTrigger><SelectValue placeholder="User"/></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All users</SelectItem>
-              {(profiles ?? []).map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              {(profiles ?? []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={actionFilter || "all"} onValueChange={(v) => setActionFilter(v === "all" ? "" : v)}>

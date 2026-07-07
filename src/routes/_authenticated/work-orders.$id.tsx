@@ -42,13 +42,13 @@ function WODetail() {
 
   const { data: notes } = useQuery({
     queryKey: ["job-notes", id],
-    queryFn: async () => (await supabase.from("job_notes").select("*,profile:profiles(name,email)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("job_notes").select("*,profile:profiles(name)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
   });
   const { data: photos } = useQuery({
     queryKey: ["photos", id],
     queryFn: async () => {
       const { data } = await supabase.from("photos")
-        .select("*,uploader:profiles!photos_uploaded_by_fkey(name,email)")
+        .select("*,uploader:profiles!photos_uploaded_by_fkey(name)")
         .eq("work_order_id", id).order("created_at", { ascending: false });
       const rows = data ?? [];
       // Resolve signed URLs for storage_path-backed photos; fall back to file_url for legacy rows.
@@ -165,7 +165,7 @@ function WODetail() {
                 {(notes ?? []).map((n: any) => (
                   <div key={n.id} className="py-2">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span><b className="text-foreground">{n.profile?.name ?? n.profile?.email ?? "Unknown"}</b> • {n.note_type}</span>
+                      <span><b className="text-foreground">{n.profile?.name ?? "Unknown"}</b> • {n.note_type}</span>
                       <span>{format(new Date(n.created_at), "MMM d, h:mm a")}</span>
                     </div>
                     <div className="text-sm whitespace-pre-wrap">{n.note_text}</div>
@@ -195,7 +195,7 @@ function WODetail() {
                       <img src={p.display_url} alt={p.file_name ?? ""} className="size-full object-cover" loading="lazy"/>
                     </a>
                     <div className="text-[11px] leading-tight text-muted-foreground">
-                      <div className="truncate"><b className="text-foreground">{p.uploader?.name ?? p.uploader?.email ?? "Unknown"}</b></div>
+                      <div className="truncate"><b className="text-foreground">{p.uploader?.name ?? "Unknown"}</b></div>
                       <div>{format(new Date(p.created_at), "MMM d, yyyy h:mm a")}</div>
                     </div>
                   </div>
