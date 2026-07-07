@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { UserPlus, Copy, RotateCcw, XCircle } from "lucide-react";
+import { UserPlus, Copy, Mail, XCircle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
+import { useServerFn } from "@tanstack/react-start";
+import { sendInviteEmail } from "@/lib/invites.functions";
 
 const ROLES = ["admin", "manager", "technician", "viewer"] as const;
 
