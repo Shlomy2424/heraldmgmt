@@ -175,27 +175,43 @@ function UsersPage() {
 function InviteDialog() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const sendEmail = useServerFn(sendInviteEmail);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"admin"|"manager"|"technician"|"viewer">("technician");
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<"sent"|"failed"|null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    const { data, error } = await supabase.from("account_invites")
-      .insert({ email: email.trim().toLowerCase(), name: name || null, phone: phone || null, role, invited_by: user?.id })
-      .select("token").single();
-    if (error) { toast.error(error.message); return; }
-    const url = `${window.location.origin}/accept-invite?token=${data.token}`;
-    await navigator.clipboard.writeText(url);
-    setCreatedUrl(url);
-    await supabase.from("activity_log").insert({ user_id: user?.id, action: "user_invited", table_name: "account_invites", details: { email, role } });
-    toast.success("Invite created — link copied to clipboard");
-    qc.invalidateQueries({ queryKey: ["invites"] });
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.from("account_invites")
+        .insert({ email: email.trim().toLowerCase(), name: name || null, phone: phone || null, role, invited_by: user?.id })
+        .select("token,email").single();
+      if (error) { toast.error(error.message); return; }
+      const url = `${window.location.origin}/accept-invite?token=${data.token}`;
+      setCreatedUrl(url);
+      await supabase.from("activity_log").insert({ user_id: user?.id, action: "user_invited", table_name: "account_invites", details: { email, role } });
+      qc.invalidateQueries({ queryKey: ["invites"] });
+      try {
+        await sendEmail({ data: { email: data.email, token: data.token, redirectOrigin: window.location.origin, name: name || null } });
+        setEmailStatus("sent");
+        toast.success(`Invite email sent to ${data.email}`);
+      } catch (e: any) {
+        setEmailStatus("failed");
+        await navigator.clipboard.writeText(url);
+        toast.error(`Email failed (${e.message ?? "unknown"}). Link copied — send manually.`);
+      }
+    } finally {
+      setBusy(false);
+    }
   }
-  function reset() { setEmail(""); setName(""); setPhone(""); setRole("technician"); setCreatedUrl(null); }
+  function reset() { setEmail(""); setName(""); setPhone(""); setRole("technician"); setCreatedUrl(null); setEmailStatus(null); }
+
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
