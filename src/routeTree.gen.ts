@@ -14,8 +14,6 @@ import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
-import { Route as AuthenticatedUnitsRouteImport } from './routes/_authenticated/units'
-import { Route as AuthenticatedTenantsRouteImport } from './routes/_authenticated/tenants'
 import { Route as AuthenticatedTechnicianRouteImport } from './routes/_authenticated/technician'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -51,16 +49,6 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
   path: '/users',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedUnitsRoute = AuthenticatedUnitsRouteImport.update({
-  id: '/units',
-  path: '/units',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedTenantsRoute = AuthenticatedTenantsRouteImport.update({
-  id: '/tenants',
-  path: '/tenants',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTechnicianRoute = AuthenticatedTechnicianRouteImport.update({
@@ -106,9 +94,9 @@ const AuthenticatedWorkOrdersIndexRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedUnitsIndexRoute = AuthenticatedUnitsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthenticatedUnitsRoute,
+  id: '/units/',
+  path: '/units/',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedWorkOrdersNewRoute =
   AuthenticatedWorkOrdersNewRouteImport.update({
@@ -140,8 +128,6 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/technician': typeof AuthenticatedTechnicianRoute
-  '/tenants': typeof AuthenticatedTenantsRoute
-  '/units': typeof AuthenticatedUnitsRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
@@ -160,7 +146,6 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/technician': typeof AuthenticatedTechnicianRoute
-  '/tenants': typeof AuthenticatedTenantsRoute
   '/users': typeof AuthenticatedUsersRoute
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
@@ -181,8 +166,6 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/technician': typeof AuthenticatedTechnicianRoute
-  '/_authenticated/tenants': typeof AuthenticatedTenantsRoute
-  '/_authenticated/units': typeof AuthenticatedUnitsRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/_authenticated/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
@@ -203,8 +186,6 @@ export interface FileRouteTypes {
     | '/reports'
     | '/schedule'
     | '/technician'
-    | '/tenants'
-    | '/units'
     | '/users'
     | '/properties/$id'
     | '/work-orders/$id'
@@ -223,7 +204,6 @@ export interface FileRouteTypes {
     | '/reports'
     | '/schedule'
     | '/technician'
-    | '/tenants'
     | '/users'
     | '/properties/$id'
     | '/work-orders/$id'
@@ -243,8 +223,6 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/schedule'
     | '/_authenticated/technician'
-    | '/_authenticated/tenants'
-    | '/_authenticated/units'
     | '/_authenticated/users'
     | '/_authenticated/properties/$id'
     | '/_authenticated/work-orders/$id'
@@ -295,20 +273,6 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/units': {
-      id: '/_authenticated/units'
-      path: '/units'
-      fullPath: '/units'
-      preLoaderRoute: typeof AuthenticatedUnitsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/tenants': {
-      id: '/_authenticated/tenants'
-      path: '/tenants'
-      fullPath: '/tenants'
-      preLoaderRoute: typeof AuthenticatedTenantsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/technician': {
@@ -369,10 +333,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/units/': {
       id: '/_authenticated/units/'
-      path: '/'
+      path: '/units'
       fullPath: '/units/'
       preLoaderRoute: typeof AuthenticatedUnitsIndexRouteImport
-      parentRoute: typeof AuthenticatedUnitsRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/work-orders/new': {
       id: '/_authenticated/work-orders/new'
@@ -412,17 +376,6 @@ const AuthenticatedPropertiesRouteWithChildren =
     AuthenticatedPropertiesRouteChildren,
   )
 
-interface AuthenticatedUnitsRouteChildren {
-  AuthenticatedUnitsIndexRoute: typeof AuthenticatedUnitsIndexRoute
-}
-
-const AuthenticatedUnitsRouteChildren: AuthenticatedUnitsRouteChildren = {
-  AuthenticatedUnitsIndexRoute: AuthenticatedUnitsIndexRoute,
-}
-
-const AuthenticatedUnitsRouteWithChildren =
-  AuthenticatedUnitsRoute._addFileChildren(AuthenticatedUnitsRouteChildren)
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -431,11 +384,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedTechnicianRoute: typeof AuthenticatedTechnicianRoute
-  AuthenticatedTenantsRoute: typeof AuthenticatedTenantsRoute
-  AuthenticatedUnitsRoute: typeof AuthenticatedUnitsRouteWithChildren
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedWorkOrdersIdRoute: typeof AuthenticatedWorkOrdersIdRoute
   AuthenticatedWorkOrdersNewRoute: typeof AuthenticatedWorkOrdersNewRoute
+  AuthenticatedUnitsIndexRoute: typeof AuthenticatedUnitsIndexRoute
   AuthenticatedWorkOrdersIndexRoute: typeof AuthenticatedWorkOrdersIndexRoute
 }
 
@@ -447,11 +399,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedTechnicianRoute: AuthenticatedTechnicianRoute,
-  AuthenticatedTenantsRoute: AuthenticatedTenantsRoute,
-  AuthenticatedUnitsRoute: AuthenticatedUnitsRouteWithChildren,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedWorkOrdersIdRoute: AuthenticatedWorkOrdersIdRoute,
   AuthenticatedWorkOrdersNewRoute: AuthenticatedWorkOrdersNewRoute,
+  AuthenticatedUnitsIndexRoute: AuthenticatedUnitsIndexRoute,
   AuthenticatedWorkOrdersIndexRoute: AuthenticatedWorkOrdersIndexRoute,
 }
 
