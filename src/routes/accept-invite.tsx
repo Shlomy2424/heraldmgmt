@@ -26,6 +26,13 @@ function AcceptInvitePage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setHasSession(!!s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!token) { setErr("Invalid invite link."); return; }
@@ -34,29 +41,35 @@ function AcceptInvitePage() {
       const row = Array.isArray(data) ? data[0] : data;
       if (!row) { setErr("Invite not found."); return; }
       if (row.revoked_at) { setErr("This invite was revoked."); return; }
-      if (row.accepted_at) { setErr("This invite has already been used. Please sign in."); return; }
+      if (row.accepted_at && !hasSession) { setErr("This invite has already been used. Please sign in."); return; }
       if (new Date(row.expires_at) < new Date()) { setErr("This invite has expired."); return; }
       setInvite(row);
     });
-  }, [token]);
+  }, [token, hasSession]);
 
   async function accept(e: React.FormEvent) {
     e.preventDefault();
     if (!invite) return;
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: invite.email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: { invite_token: token, name: invite.name ?? undefined },
-        },
-      });
-      if (error) throw error;
-      const { error: sErr } = await supabase.auth.signInWithPassword({ email: invite.email, password });
-      if (sErr) throw sErr;
-      toast.success("Welcome! Account created.");
+      if (hasSession) {
+        // User already authenticated via emailed magic/invite link — just set password
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: invite.email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: { invite_token: token, name: invite.name ?? undefined },
+          },
+        });
+        if (error) throw error;
+        const { error: sErr } = await supabase.auth.signInWithPassword({ email: invite.email, password });
+        if (sErr) throw sErr;
+      }
+      toast.success("Welcome! Account ready.");
       nav({ to: "/dashboard" });
     } catch (e: any) {
       toast.error(e.message ?? "Could not create account");

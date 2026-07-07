@@ -19,11 +19,14 @@ export const Route = createFileRoute("/_authenticated/work-orders/$id")({
   component: WODetail,
 });
 
-const STATUSES = ["new","scheduled","not_started","in_progress","waiting_parts","waiting_tenant","waiting_approval","could_not_access","done","manager_review","closed","reopened","cancelled"];
+const ALL_STATUSES = ["new","scheduled","not_started","in_progress","waiting_parts","waiting_tenant","waiting_approval","could_not_access","done","manager_review","closed","reopened","cancelled"];
+const TECH_STATUSES = ALL_STATUSES.filter((s) => s !== "closed" && s !== "cancelled");
 
 function WODetail() {
   const { id } = Route.useParams();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
+  const canClose = hasRole(["admin","manager"]);
+  const statuses = canClose ? ALL_STATUSES : TECH_STATUSES;
   const qc = useQueryClient();
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState<"technician"|"manager"|"tenant"|"internal">("internal");
@@ -215,7 +218,7 @@ function WODetail() {
                 <Select value={wo.status} onValueChange={setStatus}>
                   <SelectTrigger><SelectValue/></SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g," ")}</SelectItem>)}
+                    {statuses.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g," ")}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

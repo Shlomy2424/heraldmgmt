@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { UserPlus, Copy, RotateCcw, XCircle } from "lucide-react";
+import { UserPlus, Copy, Mail, XCircle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
+import { useServerFn } from "@tanstack/react-start";
+import { sendInviteEmail } from "@/lib/invites.functions";
 
 const ROLES = ["admin", "manager", "technician", "viewer"] as const;
 
@@ -57,10 +59,20 @@ function UsersPage() {
     const { error } = await supabase.from("account_invites").update({ revoked_at: new Date().toISOString() }).eq("id", inviteId);
     if (error) toast.error(error.message); else { toast.success("Invite revoked"); qc.invalidateQueries({ queryKey: ["invites"] }); }
   }
-  async function resend(inv: any) {
+  const sendEmail = useServerFn(sendInviteEmail);
+  async function copyLink(inv: any) {
     const url = `${window.location.origin}/accept-invite?token=${inv.token}`;
     await navigator.clipboard.writeText(url);
     toast.success("Invite link copied");
+  }
+  async function resendEmail(inv: any) {
+    try {
+      await sendEmail({ data: { email: inv.email, token: inv.token, redirectOrigin: window.location.origin, name: inv.name } });
+      toast.success(`Invite email sent to ${inv.email}`);
+    } catch (e: any) {
+      toast.error(`Email failed: ${e.message ?? "unknown"} — copy the link manually`);
+      await copyLink(inv);
+    }
   }
   async function extendInvite(inv: any) {
     const newExpiry = new Date(Date.now() + 7 * 86400000).toISOString();
@@ -112,9 +124,10 @@ function UsersPage() {
                         <td className="px-4 py-2 text-right">
                           {status === "pending" && (
                             <div className="inline-flex gap-1">
-                              <Button size="sm" variant="ghost" onClick={() => resend(i)}><Copy className="size-3.5"/></Button>
-                              <Button size="sm" variant="ghost" onClick={() => extendInvite(i)}><RotateCcw className="size-3.5"/></Button>
-                              <Button size="sm" variant="ghost" onClick={() => revoke(i.id)}><XCircle className="size-3.5"/></Button>
+                              <Button size="sm" variant="ghost" title="Copy invite link" onClick={() => copyLink(i)}><Copy className="size-3.5"/></Button>
+                              <Button size="sm" variant="ghost" title="Resend invite email" onClick={() => resendEmail(i)}><Mail className="size-3.5"/></Button>
+                              <Button size="sm" variant="ghost" title="Extend 7 days" onClick={() => extendInvite(i)}><RotateCcw className="size-3.5"/></Button>
+                              <Button size="sm" variant="ghost" title="Revoke" onClick={() => revoke(i.id)}><XCircle className="size-3.5"/></Button>
                             </div>
                           )}
                         </td>
@@ -162,27 +175,43 @@ function UsersPage() {
 function InviteDialog() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const sendEmail = useServerFn(sendInviteEmail);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"admin"|"manager"|"technician"|"viewer">("technician");
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<"sent"|"failed"|null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    const { data, error } = await supabase.from("account_invites")
-      .insert({ email: email.trim().toLowerCase(), name: name || null, phone: phone || null, role, invited_by: user?.id })
-      .select("token").single();
-    if (error) { toast.error(error.message); return; }
-    const url = `${window.location.origin}/accept-invite?token=${data.token}`;
-    await navigator.clipboard.writeText(url);
-    setCreatedUrl(url);
-    await supabase.from("activity_log").insert({ user_id: user?.id, action: "user_invited", table_name: "account_invites", details: { email, role } });
-    toast.success("Invite created — link copied to clipboard");
-    qc.invalidateQueries({ queryKey: ["invites"] });
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.from("account_invites")
+        .insert({ email: email.trim().toLowerCase(), name: name || null, phone: phone || null, role, invited_by: user?.id })
+        .select("token,email").single();
+      if (error) { toast.error(error.message); return; }
+      const url = `${window.location.origin}/accept-invite?token=${data.token}`;
+      setCreatedUrl(url);
+      await supabase.from("activity_log").insert({ user_id: user?.id, action: "user_invited", table_name: "account_invites", details: { email, role } });
+      qc.invalidateQueries({ queryKey: ["invites"] });
+      try {
+        await sendEmail({ data: { email: data.email, token: data.token, redirectOrigin: window.location.origin, name: name || null } });
+        setEmailStatus("sent");
+        toast.success(`Invite email sent to ${data.email}`);
+      } catch (e: any) {
+        setEmailStatus("failed");
+        await navigator.clipboard.writeText(url);
+        toast.error(`Email failed (${e.message ?? "unknown"}). Link copied — send manually.`);
+      }
+    } finally {
+      setBusy(false);
+    }
   }
-  function reset() { setEmail(""); setName(""); setPhone(""); setRole("technician"); setCreatedUrl(null); }
+  function reset() { setEmail(""); setName(""); setPhone(""); setRole("technician"); setCreatedUrl(null); setEmailStatus(null); }
+
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
@@ -191,10 +220,12 @@ function InviteDialog() {
         <DialogHeader><DialogTitle>Invite a new user</DialogTitle></DialogHeader>
         {createdUrl ? (
           <div className="space-y-3">
-            <p className="text-sm">Share this invite link with the person you invited. It expires in 7 days.</p>
+            {emailStatus === "sent" && <div className="text-sm p-3 rounded bg-success/10 text-success">✓ Invite email sent to {email}. They can click the link to set their password.</div>}
+            {emailStatus === "failed" && <div className="text-sm p-3 rounded bg-destructive/10 text-destructive">Email sending failed. Copy the link below and share it manually.</div>}
+            <p className="text-sm">Invite link (expires in 7 days):</p>
             <div className="p-3 bg-muted rounded text-xs break-all font-mono">{createdUrl}</div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(createdUrl); toast.success("Copied"); }}>Copy again</Button>
+              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(createdUrl); toast.success("Copied"); }}>Copy link</Button>
               <Button onClick={() => setOpen(false)}>Done</Button>
             </DialogFooter>
           </div>
@@ -212,7 +243,7 @@ function InviteDialog() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit">Create invite link</Button>
+              <Button type="submit" disabled={busy}>{busy ? "Sending…" : "Create invite & send email"}</Button>
             </DialogFooter>
           </form>
         )}

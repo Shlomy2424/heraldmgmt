@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Home as HomeIcon, Users } from "lucide-react";
+import { ArrowLeft, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { StatusBadge, PriorityBadge } from "./dashboard";
@@ -39,12 +39,12 @@ function PropertyDetail() {
   });
   const { data: tenants } = useQuery({
     queryKey: ["property-tenants", id],
-    queryFn: async () => (await supabase.from("tenants").select("id,tenant_name,unit:units(unit_number)").eq("property_id", id)).data ?? [],
+    queryFn: async () => (await supabase.from("tenants").select("id,tenant_name,unit_id,unit:units(unit_number)").eq("property_id", id)).data ?? [],
   });
   const { data: workOrders } = useQuery({
     queryKey: ["property-wo", id],
     queryFn: async () => (await supabase.from("work_orders")
-      .select("id,job_number,title,status,priority,created_at,closed_at,unit:units(unit_number),assignee:profiles!work_orders_assigned_to_fkey(name)")
+      .select("id,job_number,title,status,priority,created_at,closed_at,unit_id,unit:units(unit_number),assignee:profiles!work_orders_assigned_to_fkey(name)")
       .eq("property_id", id).order("created_at", { ascending: false })).data ?? [],
   });
 
@@ -59,6 +59,21 @@ function PropertyDetail() {
 
   const openWO = (workOrders ?? []).filter((w: any) => !["closed","cancelled"].includes(w.status));
   const closedWO = (workOrders ?? []).filter((w: any) => ["closed","cancelled"].includes(w.status));
+  const openByUnit = useMemo(() => {
+    const m = new Map<string, number>();
+    openWO.forEach((w: any) => { if (w.unit_id) m.set(w.unit_id, (m.get(w.unit_id) ?? 0) + 1); });
+    return m;
+  }, [openWO]);
+  const tenantByUnit = useMemo(() => {
+    const m = new Map<string, { id: string; name: string }[]>();
+    (tenants ?? []).forEach((t: any) => {
+      if (!t.unit_id) return;
+      const list = m.get(t.unit_id) ?? [];
+      list.push({ id: t.id, name: t.tenant_name });
+      m.set(t.unit_id, list);
+    });
+    return m;
+  }, [tenants]);
 
   return (
     <div className="space-y-4 max-w-6xl mx-auto">
@@ -115,15 +130,47 @@ function PropertyDetail() {
               )}
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y">
-                {(units ?? []).map((u: any) => (
-                  <Link key={u.id} to="/units/$id" params={{ id: u.id }} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-                    <HomeIcon className="size-4 text-muted-foreground"/>
-                    <div className="font-medium">Unit {u.unit_number}</div>
-                    <div className="text-xs text-muted-foreground">{u.unit_type}{u.floor ? ` • Floor ${u.floor}` : ""}</div>
-                  </Link>
-                ))}
-                {units?.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">No units yet.</div>}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-4 py-2">Unit</th>
+                      <th className="text-left px-4 py-2">Type</th>
+                      <th className="text-left px-4 py-2">Tenant</th>
+                      <th className="text-left px-4 py-2">Open Jobs</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {(units ?? []).map((u: any) => {
+                      const ts = tenantByUnit.get(u.id) ?? [];
+                      const openCount = openByUnit.get(u.id) ?? 0;
+                      return (
+                        <tr key={u.id} className="hover:bg-muted/30">
+                          <td className="px-4 py-2 font-medium">
+                            <Link to="/units/$id" params={{ id: u.id }} className="text-primary hover:underline">Unit {u.unit_number}</Link>
+                          </td>
+                          <td className="px-4 py-2 text-xs text-muted-foreground">{u.unit_type}{u.floor ? ` • Fl ${u.floor}` : ""}</td>
+                          <td className="px-4 py-2 text-xs">
+                            {ts.length === 0 ? <span className="text-muted-foreground">—</span> : ts.map((t, i) => (
+                              <span key={t.id}>
+                                {i > 0 && ", "}
+                                <Link to="/tenants/$id" params={{ id: t.id }} className="text-primary hover:underline">{t.name}</Link>
+                              </span>
+                            ))}
+                          </td>
+                          <td className="px-4 py-2">
+                            {openCount > 0 ? (
+                              <Link to="/work-orders" search={{ unit_id: u.id, status: "open" } as any} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-warning/15 text-warning-foreground hover:bg-warning/25">
+                                {openCount} open
+                              </Link>
+                            ) : <span className="text-xs text-muted-foreground">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {units?.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-sm text-muted-foreground">No units yet.</td></tr>}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>

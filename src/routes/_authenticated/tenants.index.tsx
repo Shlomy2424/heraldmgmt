@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ export const Route = createFileRoute("/_authenticated/tenants/")({
   head: () => ({ meta: [{ title: "Tenants" }] }),
   component: TenantsPage,
 });
+
+const OPEN_STATUSES = ["new","scheduled","not_started","in_progress","waiting_parts","waiting_tenant","waiting_approval","could_not_access","done","manager_review","reopened"];
 
 function TenantsPage() {
   const qc = useQueryClient();
@@ -34,6 +36,16 @@ function TenantsPage() {
     queryKey: ["tenants"],
     queryFn: async () => (await supabase.from("tenants").select("*,property:properties(property_name),unit:units(unit_number)").order("tenant_name")).data ?? [],
   });
+  const { data: openWO } = useQuery({
+    queryKey: ["tenants-open-wo"],
+    queryFn: async () => (await supabase.from("work_orders").select("id,tenant_id,status").in("status", OPEN_STATUSES as any)).data ?? [],
+  });
+
+  const openByTenant = useMemo(() => {
+    const m = new Map<string, number>();
+    (openWO ?? []).forEach((w: any) => { if (w.tenant_id) m.set(w.tenant_id, (m.get(w.tenant_id) ?? 0) + 1); });
+    return m;
+  }, [openWO]);
 
   async function save() {
     if (!form.tenant_name) return;
@@ -88,19 +100,36 @@ function TenantsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-              <tr><th className="text-left px-4 py-2">Name</th><th className="text-left px-4 py-2">Property</th><th className="text-left px-4 py-2">Unit</th><th className="text-left px-4 py-2">Email</th><th className="text-left px-4 py-2">Phone</th></tr>
+              <tr>
+                <th className="text-left px-4 py-2">Name</th>
+                <th className="text-left px-4 py-2">Property</th>
+                <th className="text-left px-4 py-2">Unit</th>
+                <th className="text-left px-4 py-2">Open Jobs</th>
+                <th className="text-left px-4 py-2">Email</th>
+                <th className="text-left px-4 py-2">Phone</th>
+              </tr>
             </thead>
             <tbody className="divide-y">
-              {filtered.map((t: any) => (
-                <tr key={t.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-2 font-medium"><Link to="/tenants/$id" params={{ id: t.id }} className="text-primary hover:underline">{t.tenant_name}</Link></td>
-                  <td className="px-4 py-2 text-muted-foreground">{t.property?.property_name ?? "—"}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{t.unit?.unit_number ?? "—"}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{t.email ?? "—"}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{t.phone ?? "—"}</td>
-                </tr>
-              ))}
-              {filtered.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No tenants visible. Technicians only see tenants for their assigned open work orders.</td></tr>}
+              {filtered.map((t: any) => {
+                const openCount = openByTenant.get(t.id) ?? 0;
+                return (
+                  <tr key={t.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-2 font-medium"><Link to="/tenants/$id" params={{ id: t.id }} className="text-primary hover:underline">{t.tenant_name}</Link></td>
+                    <td className="px-4 py-2 text-muted-foreground">{t.property?.property_name ?? "—"}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{t.unit?.unit_number ?? "—"}</td>
+                    <td className="px-4 py-2">
+                      {openCount > 0 ? (
+                        <Link to="/work-orders" search={{ tenant_id: t.id, status: "open" } as any} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-warning/15 text-warning-foreground hover:bg-warning/25">
+                          {openCount} open
+                        </Link>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-4 py-2 text-muted-foreground">{t.email ?? "—"}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{t.phone ?? "—"}</td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No tenants visible. Technicians only see tenants for their assigned open work orders.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -16,6 +16,8 @@ export const Route = createFileRoute("/_authenticated/work-orders/")({
     status: (s.status as string) ?? "open",
     priority: (s.priority as string) ?? "all",
     property_id: (s.property_id as string) ?? "all",
+    unit_id: (s.unit_id as string) ?? "",
+    tenant_id: (s.tenant_id as string) ?? "",
     assigned_to: (s.assigned_to as string) ?? "all",
     from: (s.from as string) ?? "",
     to: (s.to as string) ?? "",
@@ -64,7 +66,7 @@ function WorkOrdersPage() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["work-orders", statusFilter, priorityFilter, propertyFilter, assignedFilter, from, to, overdue, q],
+    queryKey: ["work-orders", statusFilter, priorityFilter, propertyFilter, assignedFilter, from, to, overdue, q, search.unit_id, search.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from("work_orders")
@@ -76,6 +78,8 @@ function WorkOrdersPage() {
       else if (statusFilter !== "all") query = query.eq("status", statusFilter as any);
       if (priorityFilter !== "all") query = query.eq("priority", priorityFilter as any);
       if (propertyFilter !== "all") query = query.eq("property_id", propertyFilter);
+      if (search.unit_id) query = query.eq("unit_id", search.unit_id);
+      if (search.tenant_id) query = query.eq("tenant_id", search.tenant_id);
       if (assignedFilter === "unassigned") query = query.is("assigned_to", null);
       else if (assignedFilter !== "all") query = query.eq("assigned_to", assignedFilter);
       if (from) query = query.gte("created_at", from);
