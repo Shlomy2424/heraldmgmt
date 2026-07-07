@@ -42,13 +42,13 @@ function WODetail() {
 
   const { data: notes } = useQuery({
     queryKey: ["job-notes", id],
-    queryFn: async () => (await supabase.from("job_notes").select("*,profile:profiles(name,email)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("job_notes").select("*,profile:profiles(name)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
   });
   const { data: photos } = useQuery({
     queryKey: ["photos", id],
     queryFn: async () => {
       const { data } = await supabase.from("photos")
-        .select("*,uploader:profiles!photos_uploaded_by_fkey(name,email)")
+        .select("*,uploader:profiles!photos_uploaded_by_fkey(name)")
         .eq("work_order_id", id).order("created_at", { ascending: false });
       const rows = data ?? [];
       // Resolve signed URLs for storage_path-backed photos; fall back to file_url for legacy rows.
