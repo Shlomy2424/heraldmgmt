@@ -9,7 +9,7 @@ type AuthCtx = {
   user: User | null;
   session: Session | null;
   roles: Role[];
-  profile: { name: string | null; email: string | null } | null;
+  profile: { name: string | null; email: string | null; active: boolean } | null;
   loading: boolean;
   hasRole: (r: Role | Role[]) => boolean;
   signOut: () => Promise<void>;
@@ -40,10 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadUserMeta(u: User) {
     const [{ data: r }, { data: p }] = await Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", u.id),
-      supabase.from("profiles").select("name").eq("id", u.id).maybeSingle(),
+      supabase.from("profiles").select("name,active").eq("id", u.id).maybeSingle(),
     ]);
+    if (p?.active === false) {
+      setRoles([]);
+      setProfile(null);
+      await supabase.auth.signOut();
+      return;
+    }
     setRoles((r ?? []).map((x) => x.role));
-    setProfile({ name: p?.name ?? null, email: u.email ?? null });
+    setProfile({ name: p?.name ?? null, email: u.email ?? null, active: p?.active ?? true });
   }
 
   const hasRole: AuthCtx["hasRole"] = (r) => {
