@@ -220,10 +220,12 @@ function InviteDialog() {
         <DialogHeader><DialogTitle>Invite a new user</DialogTitle></DialogHeader>
         {createdUrl ? (
           <div className="space-y-3">
-            <p className="text-sm">Share this invite link with the person you invited. It expires in 7 days.</p>
+            {emailStatus === "sent" && <div className="text-sm p-3 rounded bg-success/10 text-success">✓ Invite email sent to {email}. They can click the link to set their password.</div>}
+            {emailStatus === "failed" && <div className="text-sm p-3 rounded bg-destructive/10 text-destructive">Email sending failed. Copy the link below and share it manually.</div>}
+            <p className="text-sm">Invite link (expires in 7 days):</p>
             <div className="p-3 bg-muted rounded text-xs break-all font-mono">{createdUrl}</div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(createdUrl); toast.success("Copied"); }}>Copy again</Button>
+              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(createdUrl); toast.success("Copied"); }}>Copy link</Button>
               <Button onClick={() => setOpen(false)}>Done</Button>
             </DialogFooter>
           </div>
@@ -241,7 +243,7 @@ function InviteDialog() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit">Create invite link</Button>
+              <Button type="submit" disabled={busy}>{busy ? "Sending…" : "Create invite & send email"}</Button>
             </DialogFooter>
           </form>
         )}
