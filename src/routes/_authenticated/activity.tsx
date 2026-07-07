@@ -85,7 +85,7 @@ function ActivityPage() {
             <SelectTrigger><SelectValue placeholder="User"/></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All users</SelectItem>
-              {(profiles ?? []).map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              {(profiles ?? []).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={actionFilter || "all"} onValueChange={(v) => setActionFilter(v === "all" ? "" : v)}>
