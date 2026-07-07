@@ -61,7 +61,17 @@ export const Route = createFileRoute("/_authenticated/import-export")({
 });
 
 function ImportExportPage() {
+  const { hasRole, loading } = useAuth();
   const [kind, setKind] = useState<ImportKind>("properties");
+  if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!hasRole(["admin","manager"])) {
+    return (
+      <div className="max-w-lg mx-auto mt-8 text-center space-y-2">
+        <h1 className="text-2xl">Import / Export</h1>
+        <p className="text-sm text-muted-foreground">Admin or Manager access required.</p>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4 max-w-5xl">
       <div>
