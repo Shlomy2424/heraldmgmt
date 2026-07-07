@@ -38,7 +38,7 @@ function actionLabel(a: string) {
 }
 
 function ActivityPage() {
-  const { hasRole } = useAuth();
+  const { hasRole, loading } = useAuth();
   const nav = useNavigate();
   const [userFilter, setUserFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
@@ -46,12 +46,11 @@ function ActivityPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  if (!hasRole("admin")) {
-    return <div className="text-sm text-muted-foreground">Admin only.</div>;
-  }
+  const isAdmin = hasRole("admin");
 
   const { data } = useQuery({
     queryKey: ["activity", userFilter, actionFilter, tableFilter, from, to],
+    enabled: isAdmin,
     queryFn: async () => {
       let q = supabase.from("activity_log")
         .select("*,profile:profiles(name),work_order:work_orders(id,job_number,title)")
@@ -69,8 +68,13 @@ function ActivityPage() {
 
   const { data: profiles } = useQuery({
     queryKey: ["profiles-list-admin"],
+    enabled: isAdmin,
     queryFn: async () => (await supabase.rpc("admin_list_profiles")).data ?? [],
   });
+
+  if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!isAdmin) return <div className="text-sm text-muted-foreground">Admin only.</div>;
+
 
   return (
     <div className="space-y-4">
