@@ -69,7 +69,7 @@ function ReportsPage() {
       else if (report === "reopened") q = q.eq("reopened", true);
       else if (report === "waiting_parts") q = q.eq("status", "waiting_parts");
       else if (report === "waiting_tenant") q = q.eq("status", "waiting_tenant");
-      else if (report === "follow_up") q = q.not("follow_up", "is", null);
+      else if (report === "follow_up") q = q.in("follow_up", ["yes","next_week","scheduled","needs_manager_review","needs_tenant_response","needs_parts","needs_vendor"]);
       else if (report === "overdue") q = q.not("status", "in", "(closed,cancelled)").lt("created_at", new Date(Date.now() - 14 * 86400000).toISOString());
       else if (report === "old_open") q = q.not("status", "in", "(closed,cancelled)").lt("created_at", new Date(Date.now() - 30 * 86400000).toISOString());
 

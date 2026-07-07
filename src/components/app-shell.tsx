@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { cn } from "@/lib/utils";
 
-type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean };
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean; managerUp?: boolean };
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/work-orders", label: "Work Orders", icon: ClipboardList },
@@ -19,7 +19,7 @@ const NAV: NavItem[] = [
   { to: "/tenants", label: "Tenants", icon: Users },
   { to: "/technician", label: "Tech View", icon: Wrench },
   { to: "/reports", label: "Reports", icon: BarChart3 },
-  { to: "/import-export", label: "Import/Export", icon: Upload },
+  { to: "/import-export", label: "Import/Export", icon: Upload, managerUp: true },
   { to: "/activity", label: "Activity Log", icon: Activity, adminOnly: true },
   { to: "/users", label: "Users & Invites", icon: Settings, adminOnly: true },
 ];
@@ -35,7 +35,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     nav({ to: "/auth", replace: true });
   }
 
-  const items = NAV.filter((n) => !n.adminOnly || hasRole(["admin"]));
+  const items = NAV.filter((n) => {
+    if (n.adminOnly && !hasRole(["admin"])) return false;
+    if (n.managerUp && !hasRole(["admin","manager"])) return false;
+    return true;
+  });
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
