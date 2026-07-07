@@ -8,24 +8,39 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Building2 } from "lucide-react";
+import { z } from "zod";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
+
+const authSearchSchema = z.object({ inactive: fallback(z.string(), "").default("") });
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: zodValidator(authSearchSchema),
   head: () => ({ meta: [{ title: "Sign in — Maintenance Manager" }] }),
   component: AuthPage,
 });
 
 function AuthPage() {
   const nav = useNavigate();
+  const { inactive } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: "/dashboard" });
+      if (data.session) {
+        supabase.rpc("ensure_user_active").then(async ({ data: active }) => {
+          if (active) nav({ to: "/dashboard" });
+          else await supabase.auth.signOut();
+        });
+      }
     });
   }, [nav]);
+
+  useEffect(() => {
+    if (inactive === "1") toast.error("This user has been deactivated. Contact an administrator.");
+  }, [inactive]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,6 +48,11 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      const { data: active } = await supabase.rpc("ensure_user_active");
+      if (!active) {
+        await supabase.auth.signOut();
+        throw new Error("This user has been deactivated. Contact an administrator.");
+      }
       nav({ to: "/dashboard" });
     } catch (err: any) {
       toast.error(err.message ?? "Sign-in failed");

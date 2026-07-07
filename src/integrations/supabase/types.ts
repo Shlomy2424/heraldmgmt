@@ -906,16 +906,23 @@ export type Database = {
           phone: string
         }[]
       }
+      admin_set_user_active: {
+        Args: { _active: boolean; _target_user: string }
+        Returns: undefined
+      }
       can_access_work_order: { Args: { _wo: string }; Returns: boolean }
       can_write_work_order: { Args: { _wo: string }; Returns: boolean }
       current_user_roles: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      ensure_user_active: { Args: never; Returns: boolean }
       get_invite_by_token: {
         Args: { _token: string }
         Returns: {
           accepted_at: string
+          accepted_by: string
+          accepted_by_name: string
           email: string
           expires_at: string
           id: string

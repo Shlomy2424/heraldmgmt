@@ -8,6 +8,11 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
+    const { data: active } = await supabase.rpc("ensure_user_active");
+    if (!active) {
+      await supabase.auth.signOut();
+      throw redirect({ to: "/auth", search: { inactive: "1" } });
+    }
     return { user: data.user };
   },
   component: () => (
