@@ -353,9 +353,9 @@ function InviteDialog() {
           </div>
         ) : (
           <form onSubmit={create} className="space-y-3">
-            <div className="space-y-1.5"><Label>Email *</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}/></div>
-            <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)}/></div>
-            <div className="space-y-1.5"><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)}/></div>
+            <div className="space-y-1.5"><Label htmlFor="invite-email">Email *</Label><Input id="invite-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}/></div>
+            <div className="space-y-1.5"><Label htmlFor="invite-name">Name</Label><Input id="invite-name" value={name} onChange={(e) => setName(e.target.value)}/></div>
+            <div className="space-y-1.5"><Label htmlFor="invite-phone">Phone</Label><Input id="invite-phone" value={phone} onChange={(e) => setPhone(e.target.value)}/></div>
             <div className="space-y-1.5">
               <Label>Role *</Label>
               <Select value={role} onValueChange={(v: any) => setRole(v)}>
