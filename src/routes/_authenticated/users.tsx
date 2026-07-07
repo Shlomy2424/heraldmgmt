@@ -59,10 +59,20 @@ function UsersPage() {
     const { error } = await supabase.from("account_invites").update({ revoked_at: new Date().toISOString() }).eq("id", inviteId);
     if (error) toast.error(error.message); else { toast.success("Invite revoked"); qc.invalidateQueries({ queryKey: ["invites"] }); }
   }
-  async function resend(inv: any) {
+  const sendEmail = useServerFn(sendInviteEmail);
+  async function copyLink(inv: any) {
     const url = `${window.location.origin}/accept-invite?token=${inv.token}`;
     await navigator.clipboard.writeText(url);
     toast.success("Invite link copied");
+  }
+  async function resendEmail(inv: any) {
+    try {
+      await sendEmail({ data: { email: inv.email, token: inv.token, redirectOrigin: window.location.origin, name: inv.name } });
+      toast.success(`Invite email sent to ${inv.email}`);
+    } catch (e: any) {
+      toast.error(`Email failed: ${e.message ?? "unknown"} — copy the link manually`);
+      await copyLink(inv);
+    }
   }
   async function extendInvite(inv: any) {
     const newExpiry = new Date(Date.now() + 7 * 86400000).toISOString();
