@@ -895,6 +895,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_profiles: {
+        Args: never
+        Returns: {
+          active: boolean
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string
+        }[]
+      }
       can_access_work_order: { Args: { _wo: string }; Returns: boolean }
       can_write_work_order: { Args: { _wo: string }; Returns: boolean }
       current_user_roles: {
@@ -911,6 +922,16 @@ export type Database = {
           name: string
           revoked_at: string
           role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          active: boolean
+          email: string
+          id: string
+          name: string
+          phone: string
         }[]
       }
       has_any_role: {
