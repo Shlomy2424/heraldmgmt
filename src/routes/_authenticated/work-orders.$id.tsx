@@ -165,7 +165,7 @@ function WODetail() {
                 {(notes ?? []).map((n: any) => (
                   <div key={n.id} className="py-2">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span><b className="text-foreground">{n.profile?.name ?? n.profile?.email ?? "Unknown"}</b> • {n.note_type}</span>
+                      <span><b className="text-foreground">{n.profile?.name ?? "Unknown"}</b> • {n.note_type}</span>
                       <span>{format(new Date(n.created_at), "MMM d, h:mm a")}</span>
                     </div>
                     <div className="text-sm whitespace-pre-wrap">{n.note_text}</div>
