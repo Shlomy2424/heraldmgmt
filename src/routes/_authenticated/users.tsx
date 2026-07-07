@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { UserPlus, Copy, Mail, XCircle, RotateCcw, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { adminDeleteUser, createInvite, sendInviteEmail } from "@/lib/invites.functions";
+import { adminDeleteUser, adminSetUserActive, createInvite, sendInviteEmail } from "@/lib/invites.functions";
 
 const ROLES = ["admin", "manager", "technician", "viewer"] as const;
 
@@ -200,14 +200,14 @@ function UsersPage() {
 function UserLifecycleActions({ target, isSelf }: { target: any; isSelf: boolean }) {
   const qc = useQueryClient();
   const deleteUser = useServerFn(adminDeleteUser);
+  const setUserActive = useServerFn(adminSetUserActive);
   const [deleteText, setDeleteText] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function setActive(active: boolean) {
     setBusy(true);
     try {
-      const { error } = await supabase.rpc("admin_set_user_active", { _target_user: target.id, _active: active });
-      if (error) throw error;
+      await setUserActive({ data: { userId: target.id, active } });
       toast.success(active ? "User reactivated" : "User deactivated");
       qc.invalidateQueries({ queryKey: ["users-roles"] });
       qc.invalidateQueries({ queryKey: ["activity"] });
