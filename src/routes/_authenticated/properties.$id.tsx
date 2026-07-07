@@ -130,15 +130,47 @@ function PropertyDetail() {
               )}
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y">
-                {(units ?? []).map((u: any) => (
-                  <Link key={u.id} to="/units/$id" params={{ id: u.id }} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-                    <HomeIcon className="size-4 text-muted-foreground"/>
-                    <div className="font-medium">Unit {u.unit_number}</div>
-                    <div className="text-xs text-muted-foreground">{u.unit_type}{u.floor ? ` • Floor ${u.floor}` : ""}</div>
-                  </Link>
-                ))}
-                {units?.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">No units yet.</div>}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-4 py-2">Unit</th>
+                      <th className="text-left px-4 py-2">Type</th>
+                      <th className="text-left px-4 py-2">Tenant</th>
+                      <th className="text-left px-4 py-2">Open Jobs</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {(units ?? []).map((u: any) => {
+                      const ts = tenantByUnit.get(u.id) ?? [];
+                      const openCount = openByUnit.get(u.id) ?? 0;
+                      return (
+                        <tr key={u.id} className="hover:bg-muted/30">
+                          <td className="px-4 py-2 font-medium">
+                            <Link to="/units/$id" params={{ id: u.id }} className="text-primary hover:underline">Unit {u.unit_number}</Link>
+                          </td>
+                          <td className="px-4 py-2 text-xs text-muted-foreground">{u.unit_type}{u.floor ? ` • Fl ${u.floor}` : ""}</td>
+                          <td className="px-4 py-2 text-xs">
+                            {ts.length === 0 ? <span className="text-muted-foreground">—</span> : ts.map((t, i) => (
+                              <span key={t.id}>
+                                {i > 0 && ", "}
+                                <Link to="/tenants/$id" params={{ id: t.id }} className="text-primary hover:underline">{t.name}</Link>
+                              </span>
+                            ))}
+                          </td>
+                          <td className="px-4 py-2">
+                            {openCount > 0 ? (
+                              <Link to="/work-orders" search={{ unit_id: u.id, status: "open" } as any} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-warning/15 text-warning-foreground hover:bg-warning/25">
+                                {openCount} open
+                              </Link>
+                            ) : <span className="text-xs text-muted-foreground">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {units?.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-sm text-muted-foreground">No units yet.</td></tr>}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
