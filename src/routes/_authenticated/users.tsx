@@ -28,11 +28,11 @@ function UsersPage() {
   const { data: users } = useQuery({
     queryKey: ["users-roles"],
     queryFn: async () => {
-      const { data: profiles } = await supabase.from("profiles").select("id,name,email,active").order("name");
+      const { data: profiles } = await supabase.rpc("admin_list_profiles");
       const { data: roles } = await supabase.from("user_roles").select("user_id,role");
       const byUser = new Map<string, string[]>();
       (roles ?? []).forEach((r) => { if (!byUser.has(r.user_id)) byUser.set(r.user_id, []); byUser.get(r.user_id)!.push(r.role); });
-      return (profiles ?? []).map((p) => ({ ...p, roles: byUser.get(p.id) ?? [] }));
+      return (profiles ?? []).map((p: any) => ({ ...p, roles: byUser.get(p.id) ?? [] }));
     },
   });
 
