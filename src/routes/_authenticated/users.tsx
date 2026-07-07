@@ -124,9 +124,10 @@ function UsersPage() {
                         <td className="px-4 py-2 text-right">
                           {status === "pending" && (
                             <div className="inline-flex gap-1">
-                              <Button size="sm" variant="ghost" onClick={() => resend(i)}><Copy className="size-3.5"/></Button>
-                              <Button size="sm" variant="ghost" onClick={() => extendInvite(i)}><RotateCcw className="size-3.5"/></Button>
-                              <Button size="sm" variant="ghost" onClick={() => revoke(i.id)}><XCircle className="size-3.5"/></Button>
+                              <Button size="sm" variant="ghost" title="Copy invite link" onClick={() => copyLink(i)}><Copy className="size-3.5"/></Button>
+                              <Button size="sm" variant="ghost" title="Resend invite email" onClick={() => resendEmail(i)}><Mail className="size-3.5"/></Button>
+                              <Button size="sm" variant="ghost" title="Extend 7 days" onClick={() => extendInvite(i)}><RotateCcw className="size-3.5"/></Button>
+                              <Button size="sm" variant="ghost" title="Revoke" onClick={() => revoke(i.id)}><XCircle className="size-3.5"/></Button>
                             </div>
                           )}
                         </td>
