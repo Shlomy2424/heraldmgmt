@@ -193,6 +193,13 @@ export const createInvite = createServerFn({ method: "POST" })
       throw new Error(`User already exists for ${email}. Use reset password or deactivate/reinvite.`);
     }
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: authUsers, error: authListErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (authListErr) throw new Error(authListErr.message);
+    if (authUsers.users.some((authUser) => authUser.email?.toLowerCase() === email)) {
+      throw new Error(`User already exists for ${email}. Use reset password or deactivate/reinvite.`);
+    }
+
     const { data: invite, error } = await context.supabase
       .from("account_invites")
       .insert({
