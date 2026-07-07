@@ -43,7 +43,10 @@ export const sendInviteEmail = createServerFn({ method: "POST" })
     }
 
     const fromDomain = process.env.SENDER_DOMAIN || process.env.FROM_DOMAIN;
-    const from = fromDomain ? `Maintenance Manager <noreply@${fromDomain}>` : "Maintenance Manager <noreply@lovable.dev>";
+    if (!fromDomain) {
+      throw new Error(`Email not sent to ${email}: no sender domain is configured. Copy the invite link manually.`);
+    }
+    const from = `Maintenance Manager <noreply@${fromDomain}>`;
     const greeting = data.name?.trim() ? `Hi ${data.name.trim()},` : "Hi,";
     const html = `<!doctype html>
 <html>
@@ -127,6 +130,32 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
       record_id: data.userId,
       details: { email: profile.email, name: profile.name },
     });
+
+    return { ok: true };
+  });
+
+export const adminSetUserActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ userId: z.string().uuid(), active: z.boolean() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden: admin only");
+    if (data.userId === context.userId && !data.active) throw new Error("You cannot deactivate your own account from here");
+
+    const { error: dbError } = await context.supabase.rpc("admin_set_user_active", {
+      _target_user: data.userId,
+      _active: data.active,
+    });
+    if (dbError) throw new Error(dbError.message);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+      ban_duration: data.active ? "none" : "876000h",
+    });
+    if (authError) throw new Error(authError.message);
 
     return { ok: true };
   });
