@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Home as HomeIcon, Users } from "lucide-react";
+import { ArrowLeft, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { StatusBadge, PriorityBadge } from "./dashboard";
@@ -39,12 +39,12 @@ function PropertyDetail() {
   });
   const { data: tenants } = useQuery({
     queryKey: ["property-tenants", id],
-    queryFn: async () => (await supabase.from("tenants").select("id,tenant_name,unit:units(unit_number)").eq("property_id", id)).data ?? [],
+    queryFn: async () => (await supabase.from("tenants").select("id,tenant_name,unit_id,unit:units(unit_number)").eq("property_id", id)).data ?? [],
   });
   const { data: workOrders } = useQuery({
     queryKey: ["property-wo", id],
     queryFn: async () => (await supabase.from("work_orders")
-      .select("id,job_number,title,status,priority,created_at,closed_at,unit:units(unit_number),assignee:profiles!work_orders_assigned_to_fkey(name)")
+      .select("id,job_number,title,status,priority,created_at,closed_at,unit_id,unit:units(unit_number),assignee:profiles!work_orders_assigned_to_fkey(name)")
       .eq("property_id", id).order("created_at", { ascending: false })).data ?? [],
   });
 
@@ -59,6 +59,21 @@ function PropertyDetail() {
 
   const openWO = (workOrders ?? []).filter((w: any) => !["closed","cancelled"].includes(w.status));
   const closedWO = (workOrders ?? []).filter((w: any) => ["closed","cancelled"].includes(w.status));
+  const openByUnit = useMemo(() => {
+    const m = new Map<string, number>();
+    openWO.forEach((w: any) => { if (w.unit_id) m.set(w.unit_id, (m.get(w.unit_id) ?? 0) + 1); });
+    return m;
+  }, [openWO]);
+  const tenantByUnit = useMemo(() => {
+    const m = new Map<string, { id: string; name: string }[]>();
+    (tenants ?? []).forEach((t: any) => {
+      if (!t.unit_id) return;
+      const list = m.get(t.unit_id) ?? [];
+      list.push({ id: t.id, name: t.tenant_name });
+      m.set(t.unit_id, list);
+    });
+    return m;
+  }, [tenants]);
 
   return (
     <div className="space-y-4 max-w-6xl mx-auto">
