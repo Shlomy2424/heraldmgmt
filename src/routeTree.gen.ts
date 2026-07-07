@@ -26,6 +26,7 @@ import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedWorkOrdersIndexRouteImport } from './routes/_authenticated/work-orders.index'
 import { Route as AuthenticatedWorkOrdersNewRouteImport } from './routes/_authenticated/work-orders.new'
 import { Route as AuthenticatedWorkOrdersIdRouteImport } from './routes/_authenticated/work-orders.$id'
+import { Route as AuthenticatedPropertiesIdRouteImport } from './routes/_authenticated/properties.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -115,6 +116,12 @@ const AuthenticatedWorkOrdersIdRoute =
     path: '/work-orders/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPropertiesIdRoute =
+  AuthenticatedPropertiesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedPropertiesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -123,13 +130,14 @@ export interface FileRoutesByFullPath {
   '/activity': typeof AuthenticatedActivityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import-export': typeof AuthenticatedImportExportRoute
-  '/properties': typeof AuthenticatedPropertiesRoute
+  '/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/technician': typeof AuthenticatedTechnicianRoute
   '/tenants': typeof AuthenticatedTenantsRoute
   '/units': typeof AuthenticatedUnitsRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
   '/work-orders/': typeof AuthenticatedWorkOrdersIndexRoute
@@ -141,13 +149,14 @@ export interface FileRoutesByTo {
   '/activity': typeof AuthenticatedActivityRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import-export': typeof AuthenticatedImportExportRoute
-  '/properties': typeof AuthenticatedPropertiesRoute
+  '/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/technician': typeof AuthenticatedTechnicianRoute
   '/tenants': typeof AuthenticatedTenantsRoute
   '/units': typeof AuthenticatedUnitsRoute
   '/users': typeof AuthenticatedUsersRoute
+  '/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
   '/work-orders': typeof AuthenticatedWorkOrdersIndexRoute
@@ -161,13 +170,14 @@ export interface FileRoutesById {
   '/_authenticated/activity': typeof AuthenticatedActivityRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/import-export': typeof AuthenticatedImportExportRoute
-  '/_authenticated/properties': typeof AuthenticatedPropertiesRoute
+  '/_authenticated/properties': typeof AuthenticatedPropertiesRouteWithChildren
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/technician': typeof AuthenticatedTechnicianRoute
   '/_authenticated/tenants': typeof AuthenticatedTenantsRoute
   '/_authenticated/units': typeof AuthenticatedUnitsRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/_authenticated/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/_authenticated/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
   '/_authenticated/work-orders/': typeof AuthenticatedWorkOrdersIndexRoute
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/tenants'
     | '/units'
     | '/users'
+    | '/properties/$id'
     | '/work-orders/$id'
     | '/work-orders/new'
     | '/work-orders/'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/tenants'
     | '/units'
     | '/users'
+    | '/properties/$id'
     | '/work-orders/$id'
     | '/work-orders/new'
     | '/work-orders'
@@ -225,6 +237,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tenants'
     | '/_authenticated/units'
     | '/_authenticated/users'
+    | '/_authenticated/properties/$id'
     | '/_authenticated/work-orders/$id'
     | '/_authenticated/work-orders/new'
     | '/_authenticated/work-orders/'
@@ -358,14 +371,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkOrdersIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/properties/$id': {
+      id: '/_authenticated/properties/$id'
+      path: '/$id'
+      fullPath: '/properties/$id'
+      preLoaderRoute: typeof AuthenticatedPropertiesIdRouteImport
+      parentRoute: typeof AuthenticatedPropertiesRoute
+    }
   }
 }
+
+interface AuthenticatedPropertiesRouteChildren {
+  AuthenticatedPropertiesIdRoute: typeof AuthenticatedPropertiesIdRoute
+}
+
+const AuthenticatedPropertiesRouteChildren: AuthenticatedPropertiesRouteChildren =
+  {
+    AuthenticatedPropertiesIdRoute: AuthenticatedPropertiesIdRoute,
+  }
+
+const AuthenticatedPropertiesRouteWithChildren =
+  AuthenticatedPropertiesRoute._addFileChildren(
+    AuthenticatedPropertiesRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedImportExportRoute: typeof AuthenticatedImportExportRoute
-  AuthenticatedPropertiesRoute: typeof AuthenticatedPropertiesRoute
+  AuthenticatedPropertiesRoute: typeof AuthenticatedPropertiesRouteWithChildren
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedTechnicianRoute: typeof AuthenticatedTechnicianRoute
@@ -381,7 +415,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedActivityRoute: AuthenticatedActivityRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedImportExportRoute: AuthenticatedImportExportRoute,
-  AuthenticatedPropertiesRoute: AuthenticatedPropertiesRoute,
+  AuthenticatedPropertiesRoute: AuthenticatedPropertiesRouteWithChildren,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedTechnicianRoute: AuthenticatedTechnicianRoute,
