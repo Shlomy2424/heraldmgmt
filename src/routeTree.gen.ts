@@ -27,6 +27,7 @@ import { Route as AuthenticatedPropertiesIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedWorkOrdersNewRouteImport } from './routes/_authenticated/work-orders.new'
 import { Route as AuthenticatedWorkOrdersIdRouteImport } from './routes/_authenticated/work-orders.$id'
 import { Route as AuthenticatedUnitsIdRouteImport } from './routes/_authenticated/units.$id'
+import { Route as AuthenticatedTenantsIdRouteImport } from './routes/_authenticated/tenants.$id'
 import { Route as AuthenticatedPropertiesIdRouteImport } from './routes/_authenticated/properties.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -124,6 +125,11 @@ const AuthenticatedUnitsIdRoute = AuthenticatedUnitsIdRouteImport.update({
   path: '/units/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTenantsIdRoute = AuthenticatedTenantsIdRouteImport.update({
+  id: '/tenants/$id',
+  path: '/tenants/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPropertiesIdRoute =
   AuthenticatedPropertiesIdRouteImport.update({
     id: '/properties/$id',
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/technician': typeof AuthenticatedTechnicianRoute
   '/users': typeof AuthenticatedUsersRoute
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
+  '/tenants/$id': typeof AuthenticatedTenantsIdRoute
   '/units/$id': typeof AuthenticatedUnitsIdRoute
   '/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/technician': typeof AuthenticatedTechnicianRoute
   '/users': typeof AuthenticatedUsersRoute
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
+  '/tenants/$id': typeof AuthenticatedTenantsIdRoute
   '/units/$id': typeof AuthenticatedUnitsIdRoute
   '/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/_authenticated/technician': typeof AuthenticatedTechnicianRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/properties/$id': typeof AuthenticatedPropertiesIdRoute
+  '/_authenticated/tenants/$id': typeof AuthenticatedTenantsIdRoute
   '/_authenticated/units/$id': typeof AuthenticatedUnitsIdRoute
   '/_authenticated/work-orders/$id': typeof AuthenticatedWorkOrdersIdRoute
   '/_authenticated/work-orders/new': typeof AuthenticatedWorkOrdersNewRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/technician'
     | '/users'
     | '/properties/$id'
+    | '/tenants/$id'
     | '/units/$id'
     | '/work-orders/$id'
     | '/work-orders/new'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/technician'
     | '/users'
     | '/properties/$id'
+    | '/tenants/$id'
     | '/units/$id'
     | '/work-orders/$id'
     | '/work-orders/new'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/_authenticated/technician'
     | '/_authenticated/users'
     | '/_authenticated/properties/$id'
+    | '/_authenticated/tenants/$id'
     | '/_authenticated/units/$id'
     | '/_authenticated/work-orders/$id'
     | '/_authenticated/work-orders/new'
@@ -392,6 +404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUnitsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tenants/$id': {
+      id: '/_authenticated/tenants/$id'
+      path: '/tenants/$id'
+      fullPath: '/tenants/$id'
+      preLoaderRoute: typeof AuthenticatedTenantsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/properties/$id': {
       id: '/_authenticated/properties/$id'
       path: '/properties/$id'
@@ -411,6 +430,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTechnicianRoute: typeof AuthenticatedTechnicianRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedPropertiesIdRoute: typeof AuthenticatedPropertiesIdRoute
+  AuthenticatedTenantsIdRoute: typeof AuthenticatedTenantsIdRoute
   AuthenticatedUnitsIdRoute: typeof AuthenticatedUnitsIdRoute
   AuthenticatedWorkOrdersIdRoute: typeof AuthenticatedWorkOrdersIdRoute
   AuthenticatedWorkOrdersNewRoute: typeof AuthenticatedWorkOrdersNewRoute
@@ -429,6 +449,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTechnicianRoute: AuthenticatedTechnicianRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedPropertiesIdRoute: AuthenticatedPropertiesIdRoute,
+  AuthenticatedTenantsIdRoute: AuthenticatedTenantsIdRoute,
   AuthenticatedUnitsIdRoute: AuthenticatedUnitsIdRoute,
   AuthenticatedWorkOrdersIdRoute: AuthenticatedWorkOrdersIdRoute,
   AuthenticatedWorkOrdersNewRoute: AuthenticatedWorkOrdersNewRoute,
