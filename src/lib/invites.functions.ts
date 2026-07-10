@@ -38,51 +38,31 @@ export const sendInviteEmail = createServerFn({ method: "POST" })
     if (new Date(invite.expires_at) < new Date()) throw new Error(`Invite for ${email} has expired`);
 
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) {
-      throw new Error(`Email not sent to ${email}: email service is not configured. Copy the invite link manually.`);
-    }
-
     const fromDomain = process.env.SENDER_DOMAIN || process.env.FROM_DOMAIN;
-    if (!fromDomain) {
-      throw new Error(`Email not sent to ${email}: no sender domain is configured. Copy the invite link manually.`);
+    if (!apiKey || !fromDomain) {
+      return { ok: false, email, inviteLink, mode: "copy_link_only" as const,
+        reason: !apiKey ? "Email service is not configured (LOVABLE_API_KEY missing)."
+                        : "No sender domain is configured (SENDER_DOMAIN / FROM_DOMAIN missing)." };
     }
-    const from = `Maintenance Manager <noreply@${fromDomain}>`;
+    const from = `Herald Property Management <noreply@${fromDomain}>`;
     const greeting = data.name?.trim() ? `Hi ${data.name.trim()},` : "Hi,";
-    const html = `<!doctype html>
-<html>
-  <body style="font-family: Arial, sans-serif; line-height: 1.5; color: #172033; background: #f6f7f9; padding: 24px;">
-    <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #d8dde6; padding: 24px; border-radius: 8px;">
-      <h1 style="font-size: 22px; margin: 0 0 16px;">You're invited to Maintenance Manager</h1>
-      <p>${greeting}</p>
-      <p>An administrator invited you to create an account. Choose your password using the secure invite link below.</p>
-      <p style="margin: 24px 0;">
-        <a href="${inviteLink}" style="background: #1f6feb; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">Accept invite</a>
-      </p>
-      <p style="font-size: 13px; color: #586174;">If the button does not work, copy and paste this link into your browser:</p>
-      <p style="font-size: 13px; word-break: break-all; color: #1f6feb;">${inviteLink}</p>
-      <p style="font-size: 13px; color: #586174;">This invite expires in 7 days. If you did not expect this invite, you can ignore this email.</p>
-    </div>
-  </body>
-</html>`;
+    const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#172033;background:#f6f7f9;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #d8dde6;padding:24px;border-radius:8px;"><h1 style="font-size:22px;margin:0 0 16px;">You're invited to Herald Property Management</h1><p>${greeting}</p><p>An administrator invited you to create an account. Choose your password using the secure invite link below.</p><p style="margin:24px 0;"><a href="${inviteLink}" style="background:#0e4a6b;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px;display:inline-block;">Accept invite</a></p><p style="font-size:13px;color:#586174;">Or paste this link into your browser:</p><p style="font-size:13px;word-break:break-all;color:#0e4a6b;">${inviteLink}</p><p style="font-size:13px;color:#586174;">This invite expires in 7 days.</p></div></body></html>`;
 
     const response = await fetch("https://api.lovable.dev/v1/email/send", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        to: email,
-        from,
-        subject: "You're invited to Maintenance Manager",
+        to: email, from,
+        subject: "You're invited to Herald Property Management",
         html,
-        text: `You're invited to Maintenance Manager. Open this link to choose your password: ${inviteLink}`,
+        text: `You're invited. Open this link to choose your password: ${inviteLink}`,
       }),
     });
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
-      throw new Error(`Email not sent to ${email}: ${response.status} ${body || response.statusText}. Copy the invite link manually.`);
+      return { ok: false, email, inviteLink, mode: "send_failed" as const,
+        reason: `Email service returned ${response.status}: ${body || response.statusText}` };
     }
 
     await context.supabase.from("activity_log").insert({
@@ -93,7 +73,7 @@ export const sendInviteEmail = createServerFn({ method: "POST" })
       details: { email, invite_id: invite.id },
     });
 
-    return { ok: true, email, inviteLink };
+    return { ok: true as const, email, inviteLink, mode: "sent" as const };
   });
 
 export const adminDeleteUser = createServerFn({ method: "POST" })

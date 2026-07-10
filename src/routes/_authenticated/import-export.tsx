@@ -64,7 +64,7 @@ function ImportExportPage() {
   const { hasRole, loading } = useAuth();
   const [kind, setKind] = useState<ImportKind>("properties");
   if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
-  if (!hasRole(["admin","manager"])) {
+  if (!hasRole(["admin"])) {
     return (
       <div className="max-w-lg mx-auto mt-8 text-center space-y-2">
         <h1 className="text-2xl">Import / Export</h1>
