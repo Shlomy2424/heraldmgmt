@@ -139,6 +139,9 @@ function ReportsPage() {
     URL.revokeObjectURL(url);
   }
 
+  if (authLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!hasRole(["admin"])) return <div className="text-sm text-muted-foreground">Admin only.</div>;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
