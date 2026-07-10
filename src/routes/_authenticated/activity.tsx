@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
-import { format } from "date-fns";
+import { format, formatDistanceStrict } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/activity")({
   head: () => ({ meta: [{ title: "Activity Log" }] }),
@@ -70,6 +71,22 @@ function ActivityPage() {
     queryKey: ["profiles-list-admin"],
     enabled: isAdmin,
     queryFn: async () => (await supabase.rpc("admin_list_profiles")).data ?? [],
+  });
+
+  const { data: sessions } = useQuery({
+    queryKey: ["user-sessions", userFilter, from, to],
+    enabled: isAdmin,
+    queryFn: async () => {
+      let q = supabase.from("user_sessions")
+        .select("*,profile:profiles(name,email)")
+        .order("login_at", { ascending: false })
+        .limit(500);
+      if (userFilter) q = q.eq("user_id", userFilter);
+      if (from) q = q.gte("login_at", from);
+      if (to) q = q.lte("login_at", to + "T23:59:59");
+      const { data } = await q;
+      return data ?? [];
+    },
   });
 
   if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
