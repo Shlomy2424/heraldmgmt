@@ -25,9 +25,15 @@ function PropertiesPage() {
   const [q, setQ] = useState("");
   const [form, setForm] = useState({ property_name: "", address: "", city: "", state: "", zip: "", notes: "" });
 
+  const [sortBy, setSortBy] = useState<"name" | "open" | "units">("name");
+
   const { data } = useQuery({
     queryKey: ["properties"],
     queryFn: async () => (await supabase.from("properties").select("*,units(count)").order("property_name")).data ?? [],
+  });
+  const { data: openWO } = useQuery({
+    queryKey: ["properties-open-wo"],
+    queryFn: async () => (await supabase.from("work_orders").select("property_id").not("status", "in", "(closed,cancelled)")).data ?? [],
   });
 
   async function save() {
