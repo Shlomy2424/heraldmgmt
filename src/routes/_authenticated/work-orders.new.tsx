@@ -105,6 +105,7 @@ function NewWO() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user?.id) { toast.error("Not signed in"); return; }
+    if (!form.job_type) { toast.error("Job type is required"); return; }
     setBusy(true);
     try {
       const payload: any = {
