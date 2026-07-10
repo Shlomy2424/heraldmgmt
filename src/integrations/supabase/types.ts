@@ -115,6 +115,33 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          app_name: string
+          brand_color: string | null
+          email_provider_note: string | null
+          id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          app_name?: string
+          brand_color?: string | null
+          email_provider_note?: string | null
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          app_name?: string
+          brand_color?: string | null
+          email_provider_note?: string | null
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       dropdown_options: {
         Row: {
           active: boolean
@@ -727,9 +754,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          last_seen_at: string | null
+          login_at: string
+          logout_at: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          last_seen_at?: string | null
+          login_at?: string
+          logout_at?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          last_seen_at?: string | null
+          login_at?: string
+          logout_at?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_orders: {
         Row: {
           actual_hours: number | null
+          admin_estimated_hours: number | null
           archived: boolean
           assigned_to: string | null
           cancel_reason: string | null
@@ -742,13 +811,18 @@ export type Database = {
           created_at: string
           created_by: string | null
           delay_reason: Database["public"]["Enums"]["delay_reason"]
+          due_at: string | null
           estimated_hours: number | null
           follow_up: Database["public"]["Enums"]["follow_up_status"]
           follow_up_date: string | null
+          follow_up_notes: string | null
           id: string
           internal_notes: string | null
           job_number: string
+          job_type: string | null
           manager_notes: string | null
+          parts_needed: string | null
+          payer_responsibility: string | null
           priority: Database["public"]["Enums"]["job_priority"]
           property_id: string | null
           public_tenant_notes: string | null
@@ -769,6 +843,7 @@ export type Database = {
         }
         Insert: {
           actual_hours?: number | null
+          admin_estimated_hours?: number | null
           archived?: boolean
           assigned_to?: string | null
           cancel_reason?: string | null
@@ -781,13 +856,18 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delay_reason?: Database["public"]["Enums"]["delay_reason"]
+          due_at?: string | null
           estimated_hours?: number | null
           follow_up?: Database["public"]["Enums"]["follow_up_status"]
           follow_up_date?: string | null
+          follow_up_notes?: string | null
           id?: string
           internal_notes?: string | null
           job_number: string
+          job_type?: string | null
           manager_notes?: string | null
+          parts_needed?: string | null
+          payer_responsibility?: string | null
           priority?: Database["public"]["Enums"]["job_priority"]
           property_id?: string | null
           public_tenant_notes?: string | null
@@ -808,6 +888,7 @@ export type Database = {
         }
         Update: {
           actual_hours?: number | null
+          admin_estimated_hours?: number | null
           archived?: boolean
           assigned_to?: string | null
           cancel_reason?: string | null
@@ -820,13 +901,18 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delay_reason?: Database["public"]["Enums"]["delay_reason"]
+          due_at?: string | null
           estimated_hours?: number | null
           follow_up?: Database["public"]["Enums"]["follow_up_status"]
           follow_up_date?: string | null
+          follow_up_notes?: string | null
           id?: string
           internal_notes?: string | null
           job_number?: string
+          job_type?: string | null
           manager_notes?: string | null
+          parts_needed?: string | null
+          payer_responsibility?: string | null
           priority?: Database["public"]["Enums"]["job_priority"]
           property_id?: string | null
           public_tenant_notes?: string | null
