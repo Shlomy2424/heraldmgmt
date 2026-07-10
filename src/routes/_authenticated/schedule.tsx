@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -20,10 +20,14 @@ export const Route = createFileRoute("/_authenticated/schedule")({
 });
 
 type View = "day" | "week" | "month";
+type ViewBy = "scheduled" | "created" | "due" | "closed";
+
+const OPEN = ["new","scheduled","not_started","in_progress","waiting_parts","waiting_tenant","waiting_approval","could_not_access","done","manager_review","reopened"];
 
 function SchedulePage() {
   const nav = useNavigate();
   const [view, setView] = useState<View>("week");
+  const [viewBy, setViewBy] = useState<ViewBy>("scheduled");
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
   const [jumpDate, setJumpDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [propertyFilter, setPropertyFilter] = useState("all");
@@ -51,36 +55,59 @@ function SchedulePage() {
     },
   });
 
-  const { data: visits } = useQuery({
-    queryKey: ["schedule", range.start.toISOString(), range.end.toISOString(), propertyFilter, techFilter, statusFilter, priorityFilter],
+  const { data: items } = useQuery({
+    queryKey: ["schedule", viewBy, range.start.toISOString(), range.end.toISOString(), propertyFilter, techFilter, statusFilter, priorityFilter],
     queryFn: async () => {
-      let q = supabase
-        .from("schedule_visits")
-        .select("id,scheduled_date,start_time,visit_status,assigned_to,work_order:work_orders(id,job_number,title,priority,status,property_id,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name)),assignee:profiles!schedule_visits_assigned_to_fkey(name)")
-        .gte("scheduled_date", format(range.start, "yyyy-MM-dd"))
-        .lt("scheduled_date", format(range.end, "yyyy-MM-dd"))
-        .order("scheduled_date").order("start_time");
+      if (viewBy === "scheduled") {
+        let q = supabase.from("schedule_visits")
+          .select("id,scheduled_date,start_time,visit_status,assigned_to,work_order:work_orders(id,job_number,title,priority,status,property_id,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name)),assignee:profiles!schedule_visits_assigned_to_fkey(name)")
+          .gte("scheduled_date", format(range.start, "yyyy-MM-dd"))
+          .lt("scheduled_date", format(range.end, "yyyy-MM-dd"))
+          .order("scheduled_date").order("start_time");
+        if (techFilter !== "all") q = q.eq("assigned_to", techFilter);
+        const { data } = await q;
+        let rows = (data ?? []).map((v: any) => ({
+          id: v.id,
+          date: v.scheduled_date,
+          start_time: v.start_time,
+          wo: v.work_order,
+          assignee: v.assignee?.name,
+        }));
+        if (propertyFilter !== "all") rows = rows.filter((r: any) => r.wo?.property_id === propertyFilter);
+        if (statusFilter === "open") rows = rows.filter((r: any) => !["closed","cancelled"].includes(r.wo?.status));
+        else if (statusFilter === "closed") rows = rows.filter((r: any) => ["closed","cancelled"].includes(r.wo?.status));
+        if (priorityFilter !== "all") rows = rows.filter((r: any) => r.wo?.priority === priorityFilter);
+        return rows;
+      }
+      // work_orders based views (created/due/closed)
+      const col = viewBy === "created" ? "created_at" : viewBy === "due" ? "due_at" : "closed_at";
+      let q = supabase.from("work_orders")
+        .select("id,job_number,title,priority,status,property_id,assigned_to,created_at,due_at,closed_at,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name),assignee:profiles!work_orders_assigned_to_fkey(name)")
+        .gte(col, range.start.toISOString())
+        .lt(col, range.end.toISOString())
+        .order(col);
       if (techFilter !== "all") q = q.eq("assigned_to", techFilter);
+      if (propertyFilter !== "all") q = q.eq("property_id", propertyFilter);
+      if (priorityFilter !== "all") q = q.eq("priority", priorityFilter as any);
+      if (statusFilter === "open") q = q.in("status", OPEN as any);
+      else if (statusFilter === "closed") q = q.in("status", ["closed", "cancelled"] as any);
       const { data } = await q;
-      let rows = data ?? [];
-      if (propertyFilter !== "all") rows = rows.filter((v: any) => v.work_order?.property_id === propertyFilter);
-      if (statusFilter === "open") rows = rows.filter((v: any) => !["closed","cancelled"].includes(v.work_order?.status));
-      else if (statusFilter === "closed") rows = rows.filter((v: any) => ["closed","cancelled"].includes(v.work_order?.status));
-      else if (statusFilter === "completed") rows = rows.filter((v: any) => v.visit_status === "completed" || v.work_order?.status === "done");
-      if (priorityFilter !== "all") rows = rows.filter((v: any) => v.work_order?.priority === priorityFilter);
-      return rows;
+      return (data ?? []).map((w: any) => {
+        const d = viewBy === "created" ? w.created_at : viewBy === "due" ? w.due_at : w.closed_at;
+        return { id: w.id, date: d ? format(new Date(d), "yyyy-MM-dd") : null, start_time: null, wo: w, assignee: w.assignee?.name };
+      }).filter((r: any) => r.date);
     },
   });
 
   const byDay = useMemo(() => {
     const m = new Map<string, any[]>();
-    (visits ?? []).forEach((v: any) => {
-      const k = v.scheduled_date;
-      if (!m.has(k)) m.set(k, []);
-      m.get(k)!.push(v);
+    (items ?? []).forEach((v: any) => {
+      if (!v.date) return;
+      if (!m.has(v.date)) m.set(v.date, []);
+      m.get(v.date)!.push(v);
     });
     return m;
-  }, [visits]);
+  }, [items]);
 
   function goPrev() {
     if (view === "day") setAnchor(addDays(anchor, -1));
@@ -103,7 +130,7 @@ function SchedulePage() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-3xl">Schedule</h1>
-          <p className="text-sm text-muted-foreground">{heading}</p>
+          <p className="text-sm text-muted-foreground">{heading} • view by {viewBy}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Input type="date" value={jumpDate} onChange={(e) => setJumpDate(e.target.value)} className="w-40"/>
@@ -115,7 +142,16 @@ function SchedulePage() {
       </div>
 
       <Card>
-        <CardContent className="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <CardContent className="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <Select value={viewBy} onValueChange={(v) => setViewBy(v as ViewBy)}>
+            <SelectTrigger><SelectValue/></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="scheduled">View by scheduled date</SelectItem>
+              <SelectItem value="created">View by created date</SelectItem>
+              <SelectItem value="due">View by due date</SelectItem>
+              <SelectItem value="closed">View by closed date</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={propertyFilter} onValueChange={setPropertyFilter}>
             <SelectTrigger><SelectValue placeholder="Property"/></SelectTrigger>
             <SelectContent>
@@ -135,7 +171,6 @@ function SchedulePage() {
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="open">Open only</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="closed">Closed / cancelled</SelectItem>
             </SelectContent>
           </Select>
@@ -159,7 +194,7 @@ function SchedulePage() {
         </CardContent>
       </Card>
 
-      {view === "day" && <DayView date={anchor} visits={byDay.get(format(anchor, "yyyy-MM-dd")) ?? []} onOpen={(id) => nav({ to: "/work-orders/$id", params: { id } })}/>}
+      {view === "day" && <DayView date={anchor} items={byDay.get(format(anchor, "yyyy-MM-dd")) ?? []} onOpen={(id) => nav({ to: "/work-orders/$id", params: { id } })}/>}
       {view === "week" && <WeekView start={range.start} byDay={byDay} onOpen={(id) => nav({ to: "/work-orders/$id", params: { id } })}/>}
       {view === "month" && <MonthView anchor={anchor} start={range.start} end={range.end} byDay={byDay} onOpen={(id) => nav({ to: "/work-orders/$id", params: { id } })}/>}
     </div>
@@ -167,25 +202,25 @@ function SchedulePage() {
 }
 
 function VisitRow({ v, onOpen }: { v: any; onOpen: (id: string) => void }) {
-  const wo = v.work_order;
+  const wo = v.wo;
   return (
     <div onClick={() => wo && onOpen(wo.id)} className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer text-sm border">
       {v.start_time && <span className="text-xs text-muted-foreground w-14 shrink-0">{v.start_time}</span>}
       <PriorityBadge p={wo?.priority ?? "normal"}/>
       <span className="font-medium truncate flex-1">{wo?.title ?? "—"}</span>
       <span className="text-xs text-muted-foreground truncate hidden md:inline">{wo?.property?.property_name} {wo?.unit?.unit_number && `• ${wo.unit.unit_number}`}</span>
-      <span className="text-xs text-muted-foreground truncate hidden lg:inline">{v.assignee?.name ?? "Unassigned"}</span>
+      <span className="text-xs text-muted-foreground truncate hidden lg:inline">{v.assignee ?? "Unassigned"}</span>
       {wo?.status && <StatusBadge s={wo.status}/>}
     </div>
   );
 }
 
-function DayView({ date, visits, onOpen }: { date: Date; visits: any[]; onOpen: (id: string) => void }) {
+function DayView({ date, items, onOpen }: { date: Date; items: any[]; onOpen: (id: string) => void }) {
   return (
     <Card><CardContent className="p-4">
       <div className="text-sm text-muted-foreground mb-3">{format(date, "EEEE, MMMM d")}</div>
-      {visits.length === 0 ? <div className="text-sm text-muted-foreground text-center py-8">No visits scheduled.</div>
-      : <div className="space-y-1">{visits.map((v) => <VisitRow key={v.id} v={v} onOpen={onOpen}/>)}</div>}
+      {items.length === 0 ? <div className="text-sm text-muted-foreground text-center py-8">No jobs.</div>
+      : <div className="space-y-1">{items.map((v) => <VisitRow key={v.id} v={v} onOpen={onOpen}/>)}</div>}
     </CardContent></Card>
   );
 }
@@ -235,9 +270,9 @@ function MonthView({ anchor, start, end, byDay, onOpen }: { anchor: Date; start:
               <div className="font-medium mb-0.5">{format(d, "d")}</div>
               <div className="space-y-0.5">
                 {items.slice(0, 3).map((v: any) => (
-                  <div key={v.id} onClick={() => v.work_order && onOpen(v.work_order.id)}
+                  <div key={v.id} onClick={() => v.wo && onOpen(v.wo.id)}
                     className="truncate cursor-pointer hover:underline">
-                    • {v.work_order?.title ?? "—"}
+                    • {v.wo?.title ?? "—"}
                   </div>
                 ))}
                 {items.length > 3 && <div className="text-muted-foreground">+{items.length - 3} more</div>}

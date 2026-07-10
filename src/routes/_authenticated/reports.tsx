@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download } from "lucide-react";
 import { format } from "date-fns";
 import { StatusBadge, PriorityBadge } from "./dashboard";
+import { useAuth } from "@/hooks/use-auth";
 
 const REPORTS = [
   { id: "open", label: "Open jobs" },
@@ -39,6 +40,7 @@ function ReportsPage() {
   const [to, setTo] = useState("");
   const [propertyFilter, setPropertyFilter] = useState("all");
   const [techFilter, setTechFilter] = useState("all");
+  const { hasRole, loading: authLoading } = useAuth();
 
   const { data: properties } = useQuery({
     queryKey: ["properties-list"],
@@ -136,6 +138,9 @@ function ReportsPage() {
     a.href = url; a.download = `report-${report}-${Date.now()}.csv`; a.click();
     URL.revokeObjectURL(url);
   }
+
+  if (authLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!hasRole(["admin"])) return <div className="text-sm text-muted-foreground">Admin only.</div>;
 
   return (
     <div className="space-y-4">

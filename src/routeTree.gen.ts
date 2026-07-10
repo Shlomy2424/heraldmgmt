@@ -20,6 +20,7 @@ import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedImportExportRouteImport } from './routes/_authenticated/import-export'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin-settings'
 import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated/activity'
 import { Route as AuthenticatedWorkOrdersIndexRouteImport } from './routes/_authenticated/work-orders.index'
 import { Route as AuthenticatedUnitsIndexRouteImport } from './routes/_authenticated/units.index'
@@ -86,6 +87,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminSettingsRoute =
+  AuthenticatedAdminSettingsRouteImport.update({
+    id: '/admin-settings',
+    path: '/admin-settings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedActivityRoute = AuthenticatedActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/activity': typeof AuthenticatedActivityRoute
+  '/admin-settings': typeof AuthenticatedAdminSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import-export': typeof AuthenticatedImportExportRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -171,6 +179,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/activity': typeof AuthenticatedActivityRoute
+  '/admin-settings': typeof AuthenticatedAdminSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/import-export': typeof AuthenticatedImportExportRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -195,6 +204,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/activity': typeof AuthenticatedActivityRoute
+  '/_authenticated/admin-settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/import-export': typeof AuthenticatedImportExportRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/activity'
+    | '/admin-settings'
     | '/dashboard'
     | '/import-export'
     | '/reports'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/activity'
+    | '/admin-settings'
     | '/dashboard'
     | '/import-export'
     | '/reports'
@@ -264,6 +276,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/activity'
+    | '/_authenticated/admin-settings'
     | '/_authenticated/dashboard'
     | '/_authenticated/import-export'
     | '/_authenticated/reports'
@@ -368,6 +381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin-settings': {
+      id: '/_authenticated/admin-settings'
+      path: '/admin-settings'
+      fullPath: '/admin-settings'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/activity': {
       id: '/_authenticated/activity'
       path: '/activity'
@@ -443,6 +463,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
+  AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedImportExportRoute: typeof AuthenticatedImportExportRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -462,6 +483,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedActivityRoute: AuthenticatedActivityRoute,
+  AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedImportExportRoute: AuthenticatedImportExportRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,

@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
-import { format } from "date-fns";
+import { format, formatDistanceStrict } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/activity")({
   head: () => ({ meta: [{ title: "Activity Log" }] }),
@@ -72,6 +73,22 @@ function ActivityPage() {
     queryFn: async () => (await supabase.rpc("admin_list_profiles")).data ?? [],
   });
 
+  const { data: sessions } = useQuery({
+    queryKey: ["user-sessions", userFilter, from, to],
+    enabled: isAdmin,
+    queryFn: async () => {
+      let q = supabase.from("user_sessions")
+        .select("*,profile:profiles(name,email)")
+        .order("login_at", { ascending: false })
+        .limit(500);
+      if (userFilter) q = q.eq("user_id", userFilter);
+      if (from) q = q.gte("login_at", from);
+      if (to) q = q.lte("login_at", to + "T23:59:59");
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
   if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
   if (!isAdmin) return <div className="text-sm text-muted-foreground">Admin only.</div>;
 
@@ -112,43 +129,91 @@ function ActivityPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="text-left px-4 py-2">When</th>
-                  <th className="text-left px-4 py-2">User</th>
-                  <th className="text-left px-4 py-2">Action</th>
-                  <th className="text-left px-4 py-2">Related</th>
-                  <th className="text-left px-4 py-2">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {(data ?? []).map((r: any) => (
-                  <tr key={r.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-2 whitespace-nowrap text-xs text-muted-foreground">{format(new Date(r.created_at), "MMM d, yyyy h:mm a")}</td>
-                    <td className="px-4 py-2">{r.profile?.name ?? <span className="text-muted-foreground">System</span>}</td>
-                    <td className="px-4 py-2">{actionLabel(r.action)}</td>
-                    <td className="px-4 py-2">
-                      {r.work_order ? (
-                        <Link to="/work-orders/$id" params={{ id: r.work_order.id }} className="text-primary hover:underline">
-                          <span className="font-mono text-xs">{r.work_order.job_number}</span> {r.work_order.title}
-                        </Link>
-                      ) : <span className="text-xs text-muted-foreground">{r.table_name ?? "—"}</span>}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted-foreground font-mono truncate max-w-xs">
-                      {r.details ? JSON.stringify(r.details) : "—"}
-                    </td>
-                  </tr>
-                ))}
-                {data?.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No activity matches these filters</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="actions">
+        <TabsList>
+          <TabsTrigger value="actions">Actions</TabsTrigger>
+          <TabsTrigger value="sessions">Login sessions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="actions">
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-4 py-2">When</th>
+                      <th className="text-left px-4 py-2">User</th>
+                      <th className="text-left px-4 py-2">Action</th>
+                      <th className="text-left px-4 py-2">Related</th>
+                      <th className="text-left px-4 py-2">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {(data ?? []).map((r: any) => (
+                      <tr key={r.id} className="hover:bg-muted/30">
+                        <td className="px-4 py-2 whitespace-nowrap text-xs text-muted-foreground">{format(new Date(r.created_at), "MMM d, yyyy h:mm a")}</td>
+                        <td className="px-4 py-2">{r.profile?.name ?? <span className="text-muted-foreground">System</span>}</td>
+                        <td className="px-4 py-2">{actionLabel(r.action)}</td>
+                        <td className="px-4 py-2">
+                          {r.work_order ? (
+                            <Link to="/work-orders/$id" params={{ id: r.work_order.id }} className="text-primary hover:underline">
+                              <span className="font-mono text-xs">{r.work_order.job_number}</span> {r.work_order.title}
+                            </Link>
+                          ) : <span className="text-xs text-muted-foreground">{r.table_name ?? "—"}</span>}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-muted-foreground font-mono truncate max-w-xs">
+                          {r.details ? JSON.stringify(r.details) : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                    {data?.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No activity matches these filters</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sessions">
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="text-left px-4 py-2">User</th>
+                      <th className="text-left px-4 py-2">Login</th>
+                      <th className="text-left px-4 py-2">Logout / Last seen</th>
+                      <th className="text-left px-4 py-2">Duration</th>
+                      <th className="text-left px-4 py-2">Device</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {(sessions ?? []).map((s: any) => {
+                      const end = s.logout_at ?? s.last_seen_at ?? null;
+                      const durMin = s.duration_minutes ?? (end ? Math.max(0, Math.round((new Date(end).getTime() - new Date(s.login_at).getTime()) / 60000)) : null);
+                      return (
+                        <tr key={s.id} className="hover:bg-muted/30">
+                          <td className="px-4 py-2">{s.profile?.name ?? s.profile?.email ?? <span className="text-muted-foreground">Unknown</span>}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-xs text-muted-foreground">{format(new Date(s.login_at), "MMM d, yyyy h:mm a")}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-xs text-muted-foreground">
+                            {end ? format(new Date(end), "MMM d, yyyy h:mm a") : <span className="text-success">Active</span>}
+                            {!s.logout_at && s.last_seen_at && <span className="ml-1 text-[10px]">(last seen)</span>}
+                          </td>
+                          <td className="px-4 py-2 text-xs">{durMin != null ? `${durMin} min` : "—"}</td>
+                          <td className="px-4 py-2 text-xs text-muted-foreground truncate max-w-xs">{s.user_agent ?? "—"}</td>
+                        </tr>
+                      );
+                    })}
+                    {sessions?.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No sessions recorded yet</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
