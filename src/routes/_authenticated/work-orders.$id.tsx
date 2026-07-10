@@ -96,7 +96,19 @@ function WODetail() {
     },
   });
 
+  async function saveActualHours() {
+    const h = Number(actualHours);
+    if (!isFinite(h) || h < 0) { toast.error("Enter a valid actual hours value"); return; }
+    const { error } = await supabase.from("work_orders").update({ actual_hours: h }).eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Actual hours saved"); refetch(); }
+  }
   async function setStatus(s: string) {
+    if (s === "closed") {
+      const h = Number(actualHours);
+      if (!isFinite(h) || h <= 0) { toast.error("Enter Actual hours (greater than 0) before closing"); return; }
+      const { error: hErr } = await supabase.from("work_orders").update({ actual_hours: h }).eq("id", id);
+      if (hErr) { toast.error(hErr.message); return; }
+    }
     const upd: any = { status: s };
     if (s === "closed") { upd.closed_at = new Date().toISOString(); upd.closed_by = user?.id; upd.completed = true; }
     if (s === "done") { upd.completed_at = new Date().toISOString(); upd.completed = true; }
