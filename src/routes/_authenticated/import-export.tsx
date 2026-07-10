@@ -68,7 +68,7 @@ function ImportExportPage() {
     return (
       <div className="max-w-lg mx-auto mt-8 text-center space-y-2">
         <h1 className="text-2xl">Import / Export</h1>
-        <p className="text-sm text-muted-foreground">Admin or Manager access required.</p>
+        <p className="text-sm text-muted-foreground">Admin access required.</p>
       </div>
     );
   }
