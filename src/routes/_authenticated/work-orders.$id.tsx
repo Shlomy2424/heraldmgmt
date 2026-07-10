@@ -39,9 +39,24 @@ function WODetail() {
     queryFn: async () => {
       const { data } = await supabase
         .from("work_orders")
-        .select("*,property:properties(property_name,address),unit:units(unit_number),tenant:tenants(tenant_name,phone,email),assignee:profiles!work_orders_assigned_to_fkey(name)")
+        .select("*,property:properties(property_name,address),unit:units(id,unit_number),tenant:tenants(id,tenant_name,phone,email),assignee:profiles!work_orders_assigned_to_fkey(name),creator:profiles!work_orders_created_by_fkey(name)")
         .eq("id", id).maybeSingle();
+      if (data && (data as any).actual_hours != null) setActualHours(String((data as any).actual_hours));
       return data;
+    },
+  });
+
+  const { data: callCounts } = useQuery({
+    queryKey: ["wo-call-counts", (wo as any)?.unit?.id, (wo as any)?.tenant?.id],
+    enabled: isAdmin && !!wo,
+    queryFn: async () => {
+      const unitId = (wo as any).unit?.id;
+      const tenantId = (wo as any).tenant?.id;
+      const [u, t] = await Promise.all([
+        unitId ? supabase.from("work_orders").select("id", { count: "exact", head: true }).eq("unit_id", unitId) : Promise.resolve({ count: 0 } as any),
+        tenantId ? supabase.from("work_orders").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId) : Promise.resolve({ count: 0 } as any),
+      ]);
+      return { unit: u.count ?? 0, tenant: t.count ?? 0 };
     },
   });
 
