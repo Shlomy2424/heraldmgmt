@@ -98,12 +98,6 @@ function UnitsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-              <tr><th className="text-left px-4 py-2">Property</th><th className="text-left px-4 py-2">Unit</th><th className="text-left px-4 py-2">Type</th><th className="text-left px-4 py-2">Floor</th></tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.map((u: any) => (
-                <tr key={u.id} className="hover:bg-muted/30 cursor-pointer">
-                  <td className="px-4 py-2"><Link to="/units/$id" params={{ id: u.id }} className="block">{u.property?.property_name}</Link></td>
               <tr><th className="text-left px-4 py-2">Property</th><th className="text-left px-4 py-2">Unit</th><th className="text-left px-4 py-2">Type</th><th className="text-left px-4 py-2">Floor</th><th className="text-left px-4 py-2">Open jobs</th></tr>
             </thead>
             <tbody className="divide-y">
