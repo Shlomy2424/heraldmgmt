@@ -12,7 +12,6 @@ export const Route = createFileRoute("/unsubscribe")({
 function UnsubscribePage() {
   const { token } = Route.useSearch();
   const [state, setState] = useState<"loading"|"ready"|"done"|"invalid"|"used"|"error">("loading");
-  const [email, setEmail] = useState<string>("");
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
@@ -21,8 +20,8 @@ function UnsubscribePage() {
       .then(async (r) => {
         const j = await r.json().catch(() => ({}));
         if (!r.ok) { setState("invalid"); setError(j.error ?? "Invalid link"); return; }
-        if (j.used) { setState("used"); setEmail(j.email ?? ""); return; }
-        setEmail(j.email ?? "");
+        if (j.reason === "already_unsubscribed") { setState("used"); return; }
+        if (j.valid === false) { setState("invalid"); return; }
         setState("ready");
       })
       .catch(() => setState("error"));
@@ -35,7 +34,9 @@ function UnsubscribePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     });
-    if (r.ok) setState("done"); else { setState("error"); setError((await r.text().catch(() => "")) || "Failed"); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { setState("error"); setError(j.error ?? "Failed"); return; }
+    if (j.reason === "already_unsubscribed") setState("used"); else setState("done");
   }
 
   return (
@@ -46,12 +47,12 @@ function UnsubscribePage() {
           {state === "loading" && <p className="text-muted-foreground">Please wait…</p>}
           {state === "ready" && (
             <>
-              <p>Unsubscribe <b>{email}</b> from all Herald Property Management emails?</p>
+              <p>Confirm that you want to unsubscribe from all Herald Property Management emails.</p>
               <Button onClick={confirm}>Unsubscribe</Button>
             </>
           )}
-          {state === "done" && <p className="text-success">{email} has been unsubscribed. You will no longer receive emails.</p>}
-          {state === "used" && <p className="text-muted-foreground">{email} was already unsubscribed.</p>}
+          {state === "done" && <p className="text-success">You have been unsubscribed. You will no longer receive emails.</p>}
+          {state === "used" && <p className="text-muted-foreground">This address is already unsubscribed.</p>}
           {state === "invalid" && <p className="text-destructive">This unsubscribe link is invalid or expired. {error}</p>}
           {state === "error" && <p className="text-destructive">Something went wrong. {error}</p>}
         </CardContent>
