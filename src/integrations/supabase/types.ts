@@ -919,6 +919,7 @@ export type Database = {
           closed_by: string | null
           completed: boolean
           completed_at: string | null
+          cost: number | null
           created_at: string
           created_by: string | null
           delay_reason: Database["public"]["Enums"]["delay_reason"]
@@ -964,6 +965,7 @@ export type Database = {
           closed_by?: string | null
           completed?: boolean
           completed_at?: string | null
+          cost?: number | null
           created_at?: string
           created_by?: string | null
           delay_reason?: Database["public"]["Enums"]["delay_reason"]
@@ -1009,6 +1011,7 @@ export type Database = {
           closed_by?: string | null
           completed?: boolean
           completed_at?: string | null
+          cost?: number | null
           created_at?: string
           created_by?: string | null
           delay_reason?: Database["public"]["Enums"]["delay_reason"]
