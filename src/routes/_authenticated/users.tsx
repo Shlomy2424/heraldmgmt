@@ -78,11 +78,15 @@ function UsersPage() {
   }
   async function resendEmail(inv: any) {
     try {
-      await sendEmail({ data: { email: inv.email, token: inv.token, redirectOrigin: window.location.origin, name: inv.name } });
-      toast.success(`Invite email sent to ${inv.email}`);
+      const res: any = await sendEmail({ data: { email: inv.email, token: inv.token, redirectOrigin: window.location.origin, name: inv.name } });
+      if (res?.ok) toast.success(`Invite email sent to ${inv.email}`);
+      else {
+        await copyLink(inv);
+        toast.message("Copy-link only mode", { description: res?.reason ?? "Email service is not configured. Link copied to clipboard." });
+      }
     } catch (e: any) {
-      toast.error(`Email failed: ${e.message ?? "unknown"} — copy the link manually`);
       await copyLink(inv);
+      toast.error(`Email failed: ${e.message ?? "unknown"} — link copied to clipboard`);
     }
   }
   async function extendInvite(inv: any) {
