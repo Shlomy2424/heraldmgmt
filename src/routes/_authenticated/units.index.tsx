@@ -38,6 +38,12 @@ function UnitsPage() {
       return (await query).data ?? [];
     },
   });
+  const { data: openWO } = useQuery({
+    queryKey: ["units-open-wo"],
+    queryFn: async () => (await supabase.from("work_orders").select("unit_id").not("status", "in", "(closed,cancelled)")).data ?? [],
+  });
+  const openByUnit = new Map<string, number>();
+  (openWO ?? []).forEach((w: any) => { if (w.unit_id) openByUnit.set(w.unit_id, (openByUnit.get(w.unit_id) ?? 0) + 1); });
 
   async function save() {
     if (!form.property_id || !form.unit_number) return;
@@ -98,12 +104,19 @@ function UnitsPage() {
               {filtered.map((u: any) => (
                 <tr key={u.id} className="hover:bg-muted/30 cursor-pointer">
                   <td className="px-4 py-2"><Link to="/units/$id" params={{ id: u.id }} className="block">{u.property?.property_name}</Link></td>
+              <tr><th className="text-left px-4 py-2">Property</th><th className="text-left px-4 py-2">Unit</th><th className="text-left px-4 py-2">Type</th><th className="text-left px-4 py-2">Floor</th><th className="text-left px-4 py-2">Open jobs</th></tr>
+            </thead>
+            <tbody className="divide-y">
+              {filtered.map((u: any) => (
+                <tr key={u.id} className="hover:bg-muted/30 cursor-pointer">
+                  <td className="px-4 py-2"><Link to="/units/$id" params={{ id: u.id }} className="block">{u.property?.property_name}</Link></td>
                   <td className="px-4 py-2 font-medium"><Link to="/units/$id" params={{ id: u.id }} className="block">{u.unit_number}</Link></td>
                   <td className="px-4 py-2 text-muted-foreground">{u.unit_type}</td>
                   <td className="px-4 py-2 text-muted-foreground">{u.floor ?? "—"}</td>
+                  <td className="px-4 py-2"><Link to="/work-orders" search={{ status: "open", unit_id: u.id } as any} className="inline-flex items-center rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 text-xs font-medium">{openByUnit.get(u.id) ?? 0}</Link></td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">No units.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No units.</td></tr>}
             </tbody>
           </table>
         </div>
