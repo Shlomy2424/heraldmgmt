@@ -47,7 +47,7 @@ function NewWO() {
     start_time: "",
     estimated_hours: "",
     parts_needed: "",
-    follow_up: "none",
+    follow_up: "no",
     follow_up_date: "",
     follow_up_notes: "",
     payer_responsibility: "",
