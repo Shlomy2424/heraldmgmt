@@ -159,12 +159,12 @@ function DropdownOptionsCard({ optionType, title }: { optionType: string; title:
   const [label, setLabel] = useState("");
   const { data: opts } = useQuery({
     queryKey: ["dropdown_options", optionType],
-    queryFn: async () => (await supabase.from("dropdown_options").select("*").eq("option_type", optionType).order("sort_order").order("label")).data ?? [],
+    queryFn: async () => (await supabase.from("dropdown_options").select("*").eq("option_type", optionType).order("sort_order").order("option_value")).data ?? [],
   });
   async function add() {
-    if (!label.trim()) return;
-    const value = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    const { error } = await supabase.from("dropdown_options").insert({ option_type: optionType, label: label.trim(), value, active: true });
+    const v = label.trim();
+    if (!v) return;
+    const { error } = await supabase.from("dropdown_options").insert({ option_type: optionType, option_value: v, active: true });
     if (error) toast.error(error.message);
     else { setLabel(""); qc.invalidateQueries({ queryKey: ["dropdown_options", optionType] }); }
   }
@@ -190,8 +190,8 @@ function DropdownOptionsCard({ optionType, title }: { optionType: string; title:
         <div className="divide-y">
           {(opts ?? []).map((o: any) => (
             <div key={o.id} className="flex items-center justify-between py-2 text-sm">
-              <div><span className="font-medium">{o.label}</span> <span className="text-xs text-muted-foreground">({o.value})</span></div>
-              <div className="space-x-1">
+              <div className="font-medium">{o.option_value}</div>
+              <div className="space-x-1 flex items-center">
                 <span className={`text-xs px-2 py-0.5 rounded ${o.active ? "bg-success/15" : "bg-muted text-muted-foreground"}`}>{o.active ? "Active" : "Off"}</span>
                 <Button size="sm" variant="outline" onClick={() => toggle(o.id, o.active)}><Power className="size-3"/></Button>
                 <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(o.id)}><Trash2 className="size-3"/></Button>
@@ -204,3 +204,4 @@ function DropdownOptionsCard({ optionType, title }: { optionType: string; title:
     </Card>
   );
 }
+

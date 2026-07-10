@@ -52,6 +52,14 @@ function TenantDetail() {
         </Button>
       </div>
 
+      {hasRole(["admin"]) && (
+        <div className="grid md:grid-cols-3 gap-3">
+          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Open calls</div><div className="text-2xl font-display mt-1">{openWO.length}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">History</div><div className="text-2xl font-display mt-1">{closedWO.length}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total calls (admin)</div><div className="text-2xl font-display mt-1">{workOrders?.length ?? 0}</div></CardContent></Card>
+        </div>
+      )}
+
       <Card>
         <CardHeader><CardTitle className="text-base">Contact</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">

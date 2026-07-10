@@ -72,7 +72,7 @@ function UnitDetail() {
         <Stat label="Tenants" value={tenants?.length ?? 0}/>
         <Stat label="Open jobs" value={openWO.length}/>
         <Stat label="Closed jobs" value={closedWO.length}/>
-        <Stat label="Total" value={workOrders?.length ?? 0}/>
+        {hasRole(["admin"]) && <Stat label="Total calls (admin)" value={workOrders?.length ?? 0}/>}
       </div>
 
       <Card>
