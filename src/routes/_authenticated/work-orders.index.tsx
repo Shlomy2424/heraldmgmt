@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { StatusBadge, PriorityBadge } from "./dashboard";
 import { format } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_authenticated/work-orders/")({
   head: () => ({ meta: [{ title: "Work Orders" }] }),
@@ -27,9 +28,13 @@ export const Route = createFileRoute("/_authenticated/work-orders/")({
   component: WorkOrdersPage,
 });
 
+type SortKey = "job_number"|"title"|"priority"|"status"|"created_at"|"due_at"|"scheduled_date"|"job_type"|"creator";
+
 function WorkOrdersPage() {
   const nav = useNavigate();
   const search = Route.useSearch();
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole(["admin"]);
   const [q, setQ] = useState(search.q);
   const [statusFilter, setStatusFilter] = useState(search.status);
   const [priorityFilter, setPriorityFilter] = useState(search.priority);
@@ -38,8 +43,9 @@ function WorkOrdersPage() {
   const [from, setFrom] = useState(search.from);
   const [to, setTo] = useState(search.to);
   const [overdue, setOverdue] = useState(search.overdue === "1");
+  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
 
-  // Sync from URL when it changes (dashboard card click)
   useEffect(() => {
     setStatusFilter(search.status);
     setPriorityFilter(search.priority);
@@ -70,7 +76,7 @@ function WorkOrdersPage() {
     queryFn: async () => {
       let query = supabase
         .from("work_orders")
-        .select("id,job_number,title,status,priority,created_at,closed_at,assigned_to,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name),assignee:profiles!work_orders_assigned_to_fkey(name)")
+        .select("id,job_number,title,status,priority,job_type,created_at,closed_at,due_at,scheduled_date,assigned_to,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name),assignee:profiles!work_orders_assigned_to_fkey(name),creator:profiles!work_orders_created_by_fkey(name)")
         .order("created_at", { ascending: false })
         .limit(500);
       if (statusFilter === "open") query = query.not("status", "in", "(closed,cancelled)");
@@ -91,9 +97,49 @@ function WorkOrdersPage() {
     },
   });
 
+  const priOrder: Record<string, number> = { emergency: 0, high: 1, normal: 2, low: 3 };
+  const sorted = useMemo(() => {
+    const arr = [...(data ?? [])];
+    arr.sort((a: any, b: any) => {
+      let av: any, bv: any;
+      switch (sortKey) {
+        case "priority": av = priOrder[a.priority] ?? 9; bv = priOrder[b.priority] ?? 9; break;
+        case "creator": av = a.creator?.name ?? ""; bv = b.creator?.name ?? ""; break;
+        case "due_at":
+        case "scheduled_date":
+        case "created_at":
+          av = a[sortKey] ? new Date(a[sortKey]).getTime() : 0;
+          bv = b[sortKey] ? new Date(b[sortKey]).getTime() : 0;
+          break;
+        default: av = a[sortKey] ?? ""; bv = b[sortKey] ?? "";
+      }
+      if (av < bv) return sortDir === "asc" ? -1 : 1;
+      if (av > bv) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  }, [data, sortKey, sortDir]);
+
+  function toggleSort(k: SortKey) {
+    if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(k); setSortDir(k === "priority" || k === "title" || k === "job_number" || k === "job_type" || k === "creator" ? "asc" : "desc"); }
+  }
+  function SortTh({ k, label, className }: { k: SortKey; label: string; className?: string }) {
+    return (
+      <th className={`text-left px-4 py-3 select-none ${className ?? ""}`}>
+        <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => toggleSort(k)}>
+          {label}
+          {sortKey === k && (sortDir === "asc" ? <ArrowUp className="size-3"/> : <ArrowDown className="size-3"/>)}
+        </button>
+      </th>
+    );
+  }
+
   function clearFilters() {
     nav({ to: "/work-orders", search: { status: "open", priority: "all", property_id: "all", assigned_to: "all", from: "", to: "", overdue: "", q: "" } as any });
   }
+
+  const colCount = 8 + (isAdmin ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -172,32 +218,38 @@ function WorkOrdersPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
-                <th className="text-left px-4 py-3">Job #</th>
-                <th className="text-left px-4 py-3">Title</th>
+                <SortTh k="job_number" label="Job #"/>
+                <SortTh k="title" label="Title"/>
                 <th className="text-left px-4 py-3 hidden md:table-cell">Property / Unit</th>
-                <th className="text-left px-4 py-3 hidden lg:table-cell">Assigned</th>
-                <th className="text-left px-4 py-3">Priority</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-left px-4 py-3 hidden sm:table-cell">Created</th>
+                <SortTh k="job_type" label="Type" className="hidden md:table-cell"/>
+                <SortTh k="priority" label="Priority"/>
+                <SortTh k="status" label="Status"/>
+                <SortTh k="scheduled_date" label="Visit" className="hidden lg:table-cell"/>
+                <SortTh k="due_at" label="Due" className="hidden lg:table-cell"/>
+                <SortTh k="created_at" label="Created" className="hidden sm:table-cell"/>
+                {isAdmin && <SortTh k="creator" label="Created by" className="hidden lg:table-cell"/>}
               </tr>
             </thead>
             <tbody className="divide-y">
-              {isLoading && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">Loading…</td></tr>}
-              {(data ?? []).map((w: any) => (
+              {isLoading && <tr><td colSpan={colCount} className="p-8 text-center text-muted-foreground">Loading…</td></tr>}
+              {sorted.map((w: any) => (
                 <tr key={w.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => nav({ to: "/work-orders/$id", params: { id: w.id } })}>
                   <td className="px-4 py-3 font-mono text-xs">{w.job_number}</td>
                   <td className="px-4 py-3 font-medium max-w-[300px] truncate">{w.title}</td>
                   <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">
                     {w.property?.property_name}{w.unit?.unit_number && ` • ${w.unit.unit_number}`}
                   </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-xs">{w.assignee?.name ?? <span className="text-muted-foreground">—</span>}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-xs">{w.job_type ?? "—"}</td>
                   <td className="px-4 py-3"><PriorityBadge p={w.priority} /></td>
                   <td className="px-4 py-3"><StatusBadge s={w.status} /></td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">{w.scheduled_date ? format(new Date(w.scheduled_date), "MMM d") : "—"}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">{w.due_at ? format(new Date(w.due_at), "MMM d") : "—"}</td>
                   <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground">{format(new Date(w.created_at), "MMM d, yyyy")}</td>
+                  {isAdmin && <td className="px-4 py-3 hidden lg:table-cell text-xs">{w.creator?.name ?? "—"}</td>}
                 </tr>
               ))}
-              {!isLoading && data?.length === 0 && (
-                <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No work orders match the filters.</td></tr>
+              {!isLoading && sorted.length === 0 && (
+                <tr><td colSpan={colCount} className="p-8 text-center text-muted-foreground">No work orders match the filters.</td></tr>
               )}
             </tbody>
           </table>

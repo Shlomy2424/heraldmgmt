@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -37,27 +38,27 @@ export const sendInviteEmail = createServerFn({ method: "POST" })
     if (invite.accepted_at) throw new Error(`Invite for ${email} has already been accepted`);
     if (new Date(invite.expires_at) < new Date()) throw new Error(`Invite for ${email} has expired`);
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    const fromDomain = process.env.SENDER_DOMAIN || process.env.FROM_DOMAIN;
-    if (!apiKey || !fromDomain) {
-      return { ok: false, email, inviteLink, mode: "copy_link_only" as const,
-        reason: !apiKey ? "Email service is not configured (LOVABLE_API_KEY missing)."
-                        : "No sender domain is configured (SENDER_DOMAIN / FROM_DOMAIN missing)." };
-    }
-    const from = `Herald Property Management <noreply@${fromDomain}>`;
-    const greeting = data.name?.trim() ? `Hi ${data.name.trim()},` : "Hi,";
-    const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#172033;background:#f6f7f9;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #d8dde6;padding:24px;border-radius:8px;"><h1 style="font-size:22px;margin:0 0 16px;">You're invited to Herald Property Management</h1><p>${greeting}</p><p>An administrator invited you to create an account. Choose your password using the secure invite link below.</p><p style="margin:24px 0;"><a href="${inviteLink}" style="background:#0e4a6b;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px;display:inline-block;">Accept invite</a></p><p style="font-size:13px;color:#586174;">Or paste this link into your browser:</p><p style="font-size:13px;word-break:break-all;color:#0e4a6b;">${inviteLink}</p><p style="font-size:13px;color:#586174;">This invite expires in 7 days.</p></div></body></html>`;
+    // Forward the caller's bearer token to the internal queued-email route.
+    const req = getRequest();
+    const authHeader = req?.headers.get("authorization") ?? "";
+    const origin = data.redirectOrigin.replace(/\/$/, "");
 
-    const response = await fetch("https://api.lovable.dev/v1/email/send", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: email, from,
-        subject: "You're invited to Herald Property Management",
-        html,
-        text: `You're invited. Open this link to choose your password: ${inviteLink}`,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${origin}/lovable/email/transactional/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: authHeader },
+        body: JSON.stringify({
+          templateName: "invite",
+          recipientEmail: email,
+          idempotencyKey: `invite-${invite.id}-${Date.now()}`,
+          templateData: { name: data.name?.trim() || undefined, inviteLink },
+        }),
+      });
+    } catch (err: any) {
+      return { ok: false, email, inviteLink, mode: "send_failed" as const,
+        reason: `Email service unreachable: ${err?.message ?? String(err)}` };
+    }
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
@@ -75,6 +76,7 @@ export const sendInviteEmail = createServerFn({ method: "POST" })
 
     return { ok: true as const, email, inviteLink, mode: "sent" as const };
   });
+
 
 export const adminDeleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

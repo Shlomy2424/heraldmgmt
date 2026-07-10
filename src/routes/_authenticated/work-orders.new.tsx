@@ -47,7 +47,7 @@ function NewWO() {
     start_time: "",
     estimated_hours: "",
     parts_needed: "",
-    follow_up: "none",
+    follow_up: "no",
     follow_up_date: "",
     follow_up_notes: "",
     payer_responsibility: "",
@@ -105,6 +105,7 @@ function NewWO() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user?.id) { toast.error("Not signed in"); return; }
+    if (!form.job_type) { toast.error("Job type is required"); return; }
     setBusy(true);
     try {
       const payload: any = {
@@ -223,9 +224,12 @@ function NewWO() {
               </div>
               <div className="space-y-1.5"><Label>Tenant</Label>
                 <Select value={form.tenant_id} onValueChange={(v) => setForm({ ...form, tenant_id: v })} disabled={!form.unit_id}>
-                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={form.unit_id && (tenants?.length ?? 0) === 0 ? "No tenants linked to this unit" : "Select…"} /></SelectTrigger>
                   <SelectContent>{(tenants ?? []).map((t) => <SelectItem key={t.id} value={t.id}>{t.tenant_name}</SelectItem>)}</SelectContent>
                 </Select>
+                {form.unit_id && (tenants?.length ?? 0) === 0 && (
+                  <p className="text-xs text-amber-700">No tenants are linked to this unit. Add one from the unit page.</p>
+                )}
               </div>
             </div>
 
@@ -274,10 +278,14 @@ function NewWO() {
                 <Select value={form.follow_up} onValueChange={(v) => setForm({ ...form, follow_up: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="needed">Needed</SelectItem>
+                    <SelectItem value="no">No follow-up</SelectItem>
+                    <SelectItem value="yes">Yes — follow up</SelectItem>
+                    <SelectItem value="next_week">Next week</SelectItem>
                     <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="needs_manager_review">Needs manager review</SelectItem>
+                    <SelectItem value="needs_tenant_response">Needs tenant response</SelectItem>
+                    <SelectItem value="needs_parts">Needs parts</SelectItem>
+                    <SelectItem value="needs_vendor">Needs vendor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

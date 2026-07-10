@@ -26,10 +26,12 @@ function WODetail() {
   const { id } = Route.useParams();
   const { user, hasRole } = useAuth();
   const canClose = hasRole(["admin","manager"]);
+  const isAdmin = hasRole(["admin"]);
   const statuses = canClose ? ALL_STATUSES : TECH_STATUSES;
   const qc = useQueryClient();
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState<"technician"|"manager"|"tenant"|"internal">("internal");
+  const [actualHours, setActualHours] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: wo, refetch } = useQuery({
@@ -37,9 +39,24 @@ function WODetail() {
     queryFn: async () => {
       const { data } = await supabase
         .from("work_orders")
-        .select("*,property:properties(property_name,address),unit:units(unit_number),tenant:tenants(tenant_name,phone,email),assignee:profiles!work_orders_assigned_to_fkey(name)")
+        .select("*,property:properties(property_name,address),unit:units(id,unit_number),tenant:tenants(id,tenant_name,phone,email),assignee:profiles!work_orders_assigned_to_fkey(name),creator:profiles!work_orders_created_by_fkey(name)")
         .eq("id", id).maybeSingle();
+      if (data && (data as any).actual_hours != null) setActualHours(String((data as any).actual_hours));
       return data;
+    },
+  });
+
+  const { data: callCounts } = useQuery({
+    queryKey: ["wo-call-counts", (wo as any)?.unit?.id, (wo as any)?.tenant?.id],
+    enabled: isAdmin && !!wo,
+    queryFn: async () => {
+      const unitId = (wo as any).unit?.id;
+      const tenantId = (wo as any).tenant?.id;
+      const [u, t] = await Promise.all([
+        unitId ? supabase.from("work_orders").select("id", { count: "exact", head: true }).eq("unit_id", unitId) : Promise.resolve({ count: 0 } as any),
+        tenantId ? supabase.from("work_orders").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId) : Promise.resolve({ count: 0 } as any),
+      ]);
+      return { unit: u.count ?? 0, tenant: t.count ?? 0 };
     },
   });
 
@@ -79,7 +96,19 @@ function WODetail() {
     },
   });
 
+  async function saveActualHours() {
+    const h = Number(actualHours);
+    if (!isFinite(h) || h < 0) { toast.error("Enter a valid actual hours value"); return; }
+    const { error } = await supabase.from("work_orders").update({ actual_hours: h }).eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Actual hours saved"); refetch(); }
+  }
   async function setStatus(s: string) {
+    if (s === "closed") {
+      const h = Number(actualHours);
+      if (!isFinite(h) || h <= 0) { toast.error("Enter Actual hours (greater than 0) before closing"); return; }
+      const { error: hErr } = await supabase.from("work_orders").update({ actual_hours: h }).eq("id", id);
+      if (hErr) { toast.error(hErr.message); return; }
+    }
     const upd: any = { status: s };
     if (s === "closed") { upd.closed_at = new Date().toISOString(); upd.closed_by = user?.id; upd.completed = true; }
     if (s === "done") { upd.completed_at = new Date().toISOString(); upd.completed = true; }
@@ -231,6 +260,13 @@ function WODetail() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Actual hours {(!wo.actual_hours || Number(wo.actual_hours) <= 0) && <span className="text-amber-700 text-xs">(required to close)</span>}</Label>
+                <div className="flex gap-2">
+                  <Input type="number" step="0.25" min="0" value={actualHours} onChange={(e) => setActualHours(e.target.value)} />
+                  <Button size="sm" variant="outline" onClick={saveActualHours}>Save</Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -241,8 +277,27 @@ function WODetail() {
               <Row label="Tenant" value={wo.tenant?.tenant_name ?? "—"}/>
               <Row label="Tenant phone" value={wo.tenant?.phone ?? "—"}/>
               <Row label="Category" value={wo.category ?? "—"}/>
+              <Row label="Job type" value={wo.job_type ?? "—"}/>
+              <Row label="Due" value={wo.due_at ? format(new Date(wo.due_at), "MMM d, yyyy h:mm a") : "—"}/>
+              <Row label="Estimated hours" value={wo.estimated_hours != null ? String(wo.estimated_hours) : "—"}/>
+              <Row label="Actual hours" value={wo.actual_hours != null ? String(wo.actual_hours) : "—"}/>
+              <Row label="Follow-up" value={(wo.follow_up ?? "no").replace(/_/g," ")}/>
+              {wo.follow_up_date && <Row label="Follow-up date" value={format(new Date(wo.follow_up_date), "MMM d, yyyy")}/>}
+              {wo.follow_up_notes && <div><div className="text-muted-foreground text-xs">Follow-up notes</div><p className="whitespace-pre-wrap text-sm">{wo.follow_up_notes}</p></div>}
+              {wo.parts_needed && <div><div className="text-muted-foreground text-xs">Parts needed</div><p className="whitespace-pre-wrap text-sm">{wo.parts_needed}</p></div>}
               <Row label="Created" value={format(new Date(wo.created_at), "MMM d, yyyy h:mm a")}/>
               {wo.closed_at && <Row label="Closed" value={format(new Date(wo.closed_at), "MMM d, yyyy")}/>}
+              {isAdmin && <>
+                <div className="border-t pt-2 mt-2 text-xs uppercase text-muted-foreground">Admin</div>
+                <Row label="Created by" value={(wo as any).creator?.name ?? "—"}/>
+                <Row label="Payer responsibility" value={wo.payer_responsibility ?? "—"}/>
+                <Row label="Admin est. hours" value={wo.admin_estimated_hours != null ? String(wo.admin_estimated_hours) : "—"}/>
+                <Row label="Cost" value={wo.cost != null ? `$${Number(wo.cost).toFixed(2)}` : "—"}/>
+                {callCounts && <>
+                  <Row label="Calls for this unit" value={String(callCounts.unit)}/>
+                  <Row label="Calls for this tenant" value={String(callCounts.tenant)}/>
+                </>}
+              </>}
             </CardContent>
           </Card>
 

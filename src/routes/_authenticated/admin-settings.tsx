@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
-import { Trash2, Power } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
+import { Trash2, Power, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin-settings")({
   head: () => ({ meta: [{ title: "Admin Settings" }] }),
@@ -109,11 +108,13 @@ function AdminSettingsPage() {
         </CardContent>
       </Card>
 
+      <DropdownOptionsCard optionType="category" title="Categories" />
+      <DropdownOptionsCard optionType="job_type" title="Job types" />
+
       <Card>
         <CardHeader><CardTitle>Email invites</CardTitle></CardHeader>
         <CardContent className="text-sm space-y-2">
-          <p>Automated invite email requires <b>LOVABLE_API_KEY</b> and either <b>SENDER_DOMAIN</b> or <b>FROM_DOMAIN</b> environment variables to be set on the server. When either is missing, the app falls back to <b>copy invite link only</b> mode.</p>
-          <p className="text-muted-foreground">Manage secrets from Lovable Cloud → Backend → Secrets.</p>
+          <p>Invite emails are sent through the built-in email queue. Domain and DNS status is available in Cloud → Emails.</p>
         </CardContent>
       </Card>
     </div>
@@ -152,3 +153,55 @@ function RowTable({ rows, onToggle, onDelete }: { rows: { id: string; name: stri
     </div>
   );
 }
+
+function DropdownOptionsCard({ optionType, title }: { optionType: string; title: string }) {
+  const qc = useQueryClient();
+  const [label, setLabel] = useState("");
+  const { data: opts } = useQuery({
+    queryKey: ["dropdown_options", optionType],
+    queryFn: async () => (await supabase.from("dropdown_options").select("*").eq("option_type", optionType).order("sort_order").order("option_value")).data ?? [],
+  });
+  async function add() {
+    const v = label.trim();
+    if (!v) return;
+    const { error } = await supabase.from("dropdown_options").insert({ option_type: optionType, option_value: v, active: true });
+    if (error) toast.error(error.message);
+    else { setLabel(""); qc.invalidateQueries({ queryKey: ["dropdown_options", optionType] }); }
+  }
+  async function toggle(id: string, active: boolean) {
+    const { error } = await supabase.from("dropdown_options").update({ active: !active }).eq("id", id);
+    if (error) toast.error(error.message);
+    else qc.invalidateQueries({ queryKey: ["dropdown_options", optionType] });
+  }
+  async function remove(id: string) {
+    if (!confirm("Delete this option?")) return;
+    const { error } = await supabase.from("dropdown_options").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else qc.invalidateQueries({ queryKey: ["dropdown_options", optionType] });
+  }
+  return (
+    <Card>
+      <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex gap-2 max-w-md">
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`Add ${title.toLowerCase().replace(/s$/, "")}…`}/>
+          <Button onClick={add}><Plus className="size-4 mr-1"/>Add</Button>
+        </div>
+        <div className="divide-y">
+          {(opts ?? []).map((o: any) => (
+            <div key={o.id} className="flex items-center justify-between py-2 text-sm">
+              <div className="font-medium">{o.option_value}</div>
+              <div className="space-x-1 flex items-center">
+                <span className={`text-xs px-2 py-0.5 rounded ${o.active ? "bg-success/15" : "bg-muted text-muted-foreground"}`}>{o.active ? "Active" : "Off"}</span>
+                <Button size="sm" variant="outline" onClick={() => toggle(o.id, o.active)}><Power className="size-3"/></Button>
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(o.id)}><Trash2 className="size-3"/></Button>
+              </div>
+            </div>
+          ))}
+          {opts?.length === 0 && <div className="py-6 text-center text-sm text-muted-foreground">No options yet.</div>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+

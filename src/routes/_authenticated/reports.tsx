@@ -26,6 +26,11 @@ const REPORTS = [
   { id: "by_property", label: "Jobs by property" },
   { id: "by_tenant", label: "Jobs by tenant" },
   { id: "old_open", label: "Old open jobs (>30 days)" },
+  { id: "cost_of_jobs", label: "Cost of jobs" },
+  { id: "hours_per_property", label: "Actual hours per property" },
+  { id: "hours_by_type", label: "Hours by job type" },
+  { id: "per_unit_calls", label: "Calls per unit" },
+  { id: "per_tenant_calls", label: "Calls per tenant" },
 ];
 
 export const Route = createFileRoute("/_authenticated/reports")({
@@ -60,9 +65,9 @@ function ReportsPage() {
     queryKey: ["report", report, from, to, propertyFilter, techFilter],
     queryFn: async () => {
       let q = supabase.from("work_orders")
-        .select("id,job_number,title,status,priority,category,created_at,closed_at,completed_at,estimated_hours,actual_hours,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name),assignee:profiles!work_orders_assigned_to_fkey(name)")
+        .select("id,job_number,title,status,priority,category,job_type,cost,created_at,closed_at,completed_at,estimated_hours,actual_hours,property_id,unit_id,tenant_id,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name),assignee:profiles!work_orders_assigned_to_fkey(name)")
         .order("created_at", { ascending: false })
-        .limit(2000);
+        .limit(5000);
 
       if (report === "open") q = q.not("status", "in", "(closed,cancelled)");
       else if (report === "closed") q = q.eq("status", "closed");
@@ -87,7 +92,7 @@ function ReportsPage() {
 
   const grouped = useMemo(() => {
     if (!rows) return null;
-    if (report === "tech_hours") {
+    if (report === "tech_hours" || report === "estimate_vs_actual") {
       const m = new Map<string, { name: string; jobs: number; actual: number; estimated: number }>();
       rows.forEach((w: any) => {
         const key = w.assignee?.name ?? "Unassigned";
@@ -97,38 +102,62 @@ function ReportsPage() {
         cur.estimated += Number(w.estimated_hours ?? 0);
         m.set(key, cur);
       });
-      return [...m.values()].sort((a, b) => b.actual - a.actual);
+      return { kind: "tech" as const, rows: [...m.values()].sort((a, b) => b.actual - a.actual) };
     }
-    if (report === "by_property") {
+    if (report === "by_property" || report === "per_unit_calls" || report === "per_tenant_calls" || report === "by_tenant") {
       const m = new Map<string, number>();
+      rows.forEach((w: any) => {
+        const k = report === "by_property" ? (w.property?.property_name ?? "—")
+          : report === "per_unit_calls" ? `${w.property?.property_name ?? "—"} • ${w.unit?.unit_number ?? "—"}`
+          : (w.tenant?.tenant_name ?? "—");
+        m.set(k, (m.get(k) ?? 0) + 1);
+      });
+      return { kind: "count" as const, rows: [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count) };
+    }
+    if (report === "hours_per_property") {
+      const m = new Map<string, { name: string; hours: number; jobs: number }>();
       rows.forEach((w: any) => {
         const k = w.property?.property_name ?? "—";
-        m.set(k, (m.get(k) ?? 0) + 1);
+        const cur = m.get(k) ?? { name: k, hours: 0, jobs: 0 };
+        cur.hours += Number(w.actual_hours ?? 0); cur.jobs++;
+        m.set(k, cur);
       });
-      return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+      return { kind: "hours" as const, rows: [...m.values()].sort((a, b) => b.hours - a.hours) };
     }
-    if (report === "by_tenant") {
-      const m = new Map<string, number>();
+    if (report === "hours_by_type") {
+      const m = new Map<string, { name: string; hours: number; jobs: number }>();
       rows.forEach((w: any) => {
-        const k = w.tenant?.tenant_name ?? "—";
-        m.set(k, (m.get(k) ?? 0) + 1);
+        const k = w.job_type ?? w.category ?? "—";
+        const cur = m.get(k) ?? { name: k, hours: 0, jobs: 0 };
+        cur.hours += Number(w.actual_hours ?? 0); cur.jobs++;
+        m.set(k, cur);
       });
-      return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+      return { kind: "hours" as const, rows: [...m.values()].sort((a, b) => b.hours - a.hours) };
+    }
+    if (report === "cost_of_jobs") {
+      const m = new Map<string, { name: string; cost: number; jobs: number }>();
+      rows.forEach((w: any) => {
+        const k = w.property?.property_name ?? "—";
+        const cur = m.get(k) ?? { name: k, cost: 0, jobs: 0 };
+        cur.cost += Number(w.cost ?? 0); cur.jobs++;
+        m.set(k, cur);
+      });
+      return { kind: "cost" as const, rows: [...m.values()].sort((a, b) => b.cost - a.cost) };
     }
     return null;
   }, [rows, report]);
 
   function exportCSV() {
     if (!rows) return;
-    const cols = ["job_number","title","status","priority","category","assigned","property","unit","tenant","created","closed","estimated_hours","actual_hours"];
+    const cols = ["job_number","title","status","priority","category","job_type","assigned","property","unit","tenant","created","closed","estimated_hours","actual_hours","cost"];
     const csv = [cols.join(",")];
     rows.forEach((w: any) => {
       const row = [
-        w.job_number, w.title, w.status, w.priority, w.category ?? "",
+        w.job_number, w.title, w.status, w.priority, w.category ?? "", w.job_type ?? "",
         w.assignee?.name ?? "", w.property?.property_name ?? "", w.unit?.unit_number ?? "",
         w.tenant?.tenant_name ?? "",
         w.created_at ?? "", w.closed_at ?? "",
-        w.estimated_hours ?? "", w.actual_hours ?? "",
+        w.estimated_hours ?? "", w.actual_hours ?? "", w.cost ?? "",
       ].map((v) => JSON.stringify(String(v ?? "")));
       csv.push(row.join(","));
     });
@@ -184,24 +213,33 @@ function ReportsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                {report === "tech_hours" ? (
+                {grouped.kind === "tech" ? (
                   <tr><th className="text-left px-4 py-2">Technician</th><th className="text-right px-4 py-2">Jobs</th><th className="text-right px-4 py-2">Estimated</th><th className="text-right px-4 py-2">Actual</th><th className="text-right px-4 py-2">Variance</th></tr>
+                ) : grouped.kind === "hours" ? (
+                  <tr><th className="text-left px-4 py-2">Name</th><th className="text-right px-4 py-2">Jobs</th><th className="text-right px-4 py-2">Actual hours</th></tr>
+                ) : grouped.kind === "cost" ? (
+                  <tr><th className="text-left px-4 py-2">Property</th><th className="text-right px-4 py-2">Jobs</th><th className="text-right px-4 py-2">Total cost</th></tr>
                 ) : (
                   <tr><th className="text-left px-4 py-2">Name</th><th className="text-right px-4 py-2">Jobs</th></tr>
                 )}
               </thead>
               <tbody className="divide-y">
-                {report === "tech_hours" ? (grouped as any[]).map((r) => (
+                {grouped.kind === "tech" && grouped.rows.map((r) => (
                   <tr key={r.name}>
                     <td className="px-4 py-2 font-medium">{r.name}</td>
                     <td className="px-4 py-2 text-right">{r.jobs}</td>
                     <td className="px-4 py-2 text-right">{r.estimated.toFixed(1)}</td>
                     <td className="px-4 py-2 text-right">{r.actual.toFixed(1)}</td>
-                    <td className={`px-4 py-2 text-right ${r.actual - r.estimated > 0 ? "text-destructive" : "text-success"}`}>
-                      {(r.actual - r.estimated).toFixed(1)}
-                    </td>
+                    <td className={`px-4 py-2 text-right ${r.actual - r.estimated > 0 ? "text-destructive" : ""}`}>{(r.actual - r.estimated).toFixed(1)}</td>
                   </tr>
-                )) : (grouped as any[]).map((r) => (
+                ))}
+                {grouped.kind === "hours" && grouped.rows.map((r) => (
+                  <tr key={r.name}><td className="px-4 py-2 font-medium">{r.name}</td><td className="px-4 py-2 text-right">{r.jobs}</td><td className="px-4 py-2 text-right">{r.hours.toFixed(1)}</td></tr>
+                ))}
+                {grouped.kind === "cost" && grouped.rows.map((r) => (
+                  <tr key={r.name}><td className="px-4 py-2 font-medium">{r.name}</td><td className="px-4 py-2 text-right">{r.jobs}</td><td className="px-4 py-2 text-right">${r.cost.toFixed(2)}</td></tr>
+                ))}
+                {grouped.kind === "count" && grouped.rows.map((r) => (
                   <tr key={r.name}><td className="px-4 py-2 font-medium">{r.name}</td><td className="px-4 py-2 text-right">{r.count}</td></tr>
                 ))}
               </tbody>
@@ -223,6 +261,7 @@ function ReportsPage() {
                   <th className="text-left px-4 py-2">Status</th>
                   <th className="text-left px-4 py-2">Created</th>
                   <th className="text-right px-4 py-2">Est/Act hrs</th>
+                  <th className="text-right px-4 py-2">Cost</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -237,9 +276,10 @@ function ReportsPage() {
                     <td className="px-4 py-2"><StatusBadge s={w.status}/></td>
                     <td className="px-4 py-2 text-xs text-muted-foreground">{format(new Date(w.created_at), "MMM d, yyyy")}</td>
                     <td className="px-4 py-2 text-xs text-right">{w.estimated_hours ?? "—"} / {w.actual_hours ?? "—"}</td>
+                    <td className="px-4 py-2 text-xs text-right">{w.cost != null ? `$${Number(w.cost).toFixed(2)}` : "—"}</td>
                   </tr>
                 ))}
-                {rows?.length === 0 && <tr><td colSpan={9} className="px-4 py-6 text-center text-muted-foreground">No results</td></tr>}
+                {rows?.length === 0 && <tr><td colSpan={10} className="px-4 py-6 text-center text-muted-foreground">No results</td></tr>}
               </tbody>
             </table>
           </div>
