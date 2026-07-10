@@ -43,6 +43,8 @@ function PropertiesPage() {
     else { toast.success("Created"); setOpen(false); setForm({ property_name: "", address: "", city: "", state: "", zip: "", notes: "" }); qc.invalidateQueries({ queryKey: ["properties"] }); }
   }
 
+  const openByProp = new Map<string, number>();
+  (openWO ?? []).forEach((w: any) => { if (w.property_id) openByProp.set(w.property_id, (openByProp.get(w.property_id) ?? 0) + 1); });
   const filtered = (data ?? []).filter((p: any) => !q || p.property_name?.toLowerCase().includes(q.toLowerCase()) || p.address?.toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -83,7 +85,10 @@ function PropertiesPage() {
                   <div className="min-w-0 flex-1">
                     <div className="font-display text-lg truncate">{p.property_name}</div>
                     <div className="text-sm text-muted-foreground truncate">{p.address ?? "—"}</div>
-                    <div className="text-xs text-muted-foreground mt-2">{p.units?.[0]?.count ?? 0} units</div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
+                      <span>{p.units?.[0]?.count ?? 0} units</span>
+                      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 font-medium">{openByProp.get(p.id) ?? 0} open</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
