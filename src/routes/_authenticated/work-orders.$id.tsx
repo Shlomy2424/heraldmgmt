@@ -26,10 +26,12 @@ function WODetail() {
   const { id } = Route.useParams();
   const { user, hasRole } = useAuth();
   const canClose = hasRole(["admin","manager"]);
+  const isAdmin = hasRole(["admin"]);
   const statuses = canClose ? ALL_STATUSES : TECH_STATUSES;
   const qc = useQueryClient();
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState<"technician"|"manager"|"tenant"|"internal">("internal");
+  const [actualHours, setActualHours] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: wo, refetch } = useQuery({
