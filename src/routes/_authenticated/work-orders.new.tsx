@@ -224,9 +224,12 @@ function NewWO() {
               </div>
               <div className="space-y-1.5"><Label>Tenant</Label>
                 <Select value={form.tenant_id} onValueChange={(v) => setForm({ ...form, tenant_id: v })} disabled={!form.unit_id}>
-                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={form.unit_id && (tenants?.length ?? 0) === 0 ? "No tenants linked to this unit" : "Select…"} /></SelectTrigger>
                   <SelectContent>{(tenants ?? []).map((t) => <SelectItem key={t.id} value={t.id}>{t.tenant_name}</SelectItem>)}</SelectContent>
                 </Select>
+                {form.unit_id && (tenants?.length ?? 0) === 0 && (
+                  <p className="text-xs text-amber-700">No tenants are linked to this unit. Add one from the unit page.</p>
+                )}
               </div>
             </div>
 
