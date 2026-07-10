@@ -309,7 +309,8 @@ function InviteDialog() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"admin"|"manager"|"technician"|"viewer">("technician");
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
-  const [emailStatus, setEmailStatus] = useState<"sent"|"failed"|null>(null);
+  const [emailStatus, setEmailStatus] = useState<"sent"|"copy_link_only"|"failed"|null>(null);
+  const [emailReason, setEmailReason] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function create(e: React.FormEvent) {
@@ -322,11 +323,17 @@ function InviteDialog() {
       setCreatedUrl(url);
       qc.invalidateQueries({ queryKey: ["invites"] });
       try {
-        await sendEmail({ data: { email: data.email, token: data.token, redirectOrigin: window.location.origin, name: name || null } });
-        setEmailStatus("sent");
-        toast.success(`Invite email sent to ${data.email}`);
+        const res: any = await sendEmail({ data: { email: data.email, token: data.token, redirectOrigin: window.location.origin, name: name || null } });
+        if (res?.ok) { setEmailStatus("sent"); toast.success(`Invite email sent to ${data.email}`); }
+        else {
+          setEmailStatus("copy_link_only");
+          setEmailReason(res?.reason ?? null);
+          await navigator.clipboard.writeText(url);
+          toast.message("Copy-link only mode", { description: "Email service is not configured. Link copied." });
+        }
       } catch (e: any) {
         setEmailStatus("failed");
+        setEmailReason(e.message ?? "unknown");
         await navigator.clipboard.writeText(url);
         toast.error(`Email failed (${e.message ?? "unknown"}). Link copied — send manually.`);
       }
@@ -336,7 +343,7 @@ function InviteDialog() {
       setBusy(false);
     }
   }
-  function reset() { setEmail(""); setName(""); setPhone(""); setRole("technician"); setCreatedUrl(null); setEmailStatus(null); }
+  function reset() { setEmail(""); setName(""); setPhone(""); setRole("technician"); setCreatedUrl(null); setEmailStatus(null); setEmailReason(null); }
 
 
   return (
@@ -347,7 +354,8 @@ function InviteDialog() {
         {createdUrl ? (
           <div className="space-y-3">
             {emailStatus === "sent" && <div className="text-sm p-3 rounded bg-success/10 text-success">✓ Invite email sent to {email}. They can click the link to set their password.</div>}
-            {emailStatus === "failed" && <div className="text-sm p-3 rounded bg-destructive/10 text-destructive">Email sending failed. Copy the link below and share it manually.</div>}
+            {emailStatus === "copy_link_only" && <div className="text-sm p-3 rounded bg-amber-100 text-amber-900">Copy-link only mode: {emailReason ?? "email service not configured"}. Share the link manually.</div>}
+            {emailStatus === "failed" && <div className="text-sm p-3 rounded bg-destructive/10 text-destructive">Email sending failed{emailReason ? `: ${emailReason}` : ""}. Copy the link below and share it manually.</div>}
             <p className="text-sm">Invite link (expires in 7 days):</p>
             <div className="p-3 bg-muted rounded text-xs break-all font-mono">{createdUrl}</div>
             <DialogFooter>
