@@ -109,11 +109,13 @@ function AdminSettingsPage() {
         </CardContent>
       </Card>
 
+      <DropdownOptionsCard optionType="category" title="Categories" />
+      <DropdownOptionsCard optionType="job_type" title="Job types" />
+
       <Card>
         <CardHeader><CardTitle>Email invites</CardTitle></CardHeader>
         <CardContent className="text-sm space-y-2">
-          <p>Automated invite email requires <b>LOVABLE_API_KEY</b> and either <b>SENDER_DOMAIN</b> or <b>FROM_DOMAIN</b> environment variables to be set on the server. When either is missing, the app falls back to <b>copy invite link only</b> mode.</p>
-          <p className="text-muted-foreground">Manage secrets from Lovable Cloud → Backend → Secrets.</p>
+          <p>Invite emails are sent through the built-in email queue. Domain and DNS status is available in Cloud → Emails.</p>
         </CardContent>
       </Card>
     </div>
