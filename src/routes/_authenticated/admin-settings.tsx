@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
-import { Trash2, Power } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
+import { Trash2, Power, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin-settings")({
   head: () => ({ meta: [{ title: "Admin Settings" }] }),
@@ -152,5 +151,56 @@ function RowTable({ rows, onToggle, onDelete }: { rows: { id: string; name: stri
         </tbody>
       </table>
     </div>
+  );
+}
+
+function DropdownOptionsCard({ optionType, title }: { optionType: string; title: string }) {
+  const qc = useQueryClient();
+  const [label, setLabel] = useState("");
+  const { data: opts } = useQuery({
+    queryKey: ["dropdown_options", optionType],
+    queryFn: async () => (await supabase.from("dropdown_options").select("*").eq("option_type", optionType).order("sort_order").order("label")).data ?? [],
+  });
+  async function add() {
+    if (!label.trim()) return;
+    const value = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    const { error } = await supabase.from("dropdown_options").insert({ option_type: optionType, label: label.trim(), value, active: true });
+    if (error) toast.error(error.message);
+    else { setLabel(""); qc.invalidateQueries({ queryKey: ["dropdown_options", optionType] }); }
+  }
+  async function toggle(id: string, active: boolean) {
+    const { error } = await supabase.from("dropdown_options").update({ active: !active }).eq("id", id);
+    if (error) toast.error(error.message);
+    else qc.invalidateQueries({ queryKey: ["dropdown_options", optionType] });
+  }
+  async function remove(id: string) {
+    if (!confirm("Delete this option?")) return;
+    const { error } = await supabase.from("dropdown_options").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else qc.invalidateQueries({ queryKey: ["dropdown_options", optionType] });
+  }
+  return (
+    <Card>
+      <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex gap-2 max-w-md">
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`Add ${title.toLowerCase().replace(/s$/, "")}…`}/>
+          <Button onClick={add}><Plus className="size-4 mr-1"/>Add</Button>
+        </div>
+        <div className="divide-y">
+          {(opts ?? []).map((o: any) => (
+            <div key={o.id} className="flex items-center justify-between py-2 text-sm">
+              <div><span className="font-medium">{o.label}</span> <span className="text-xs text-muted-foreground">({o.value})</span></div>
+              <div className="space-x-1">
+                <span className={`text-xs px-2 py-0.5 rounded ${o.active ? "bg-success/15" : "bg-muted text-muted-foreground"}`}>{o.active ? "Active" : "Off"}</span>
+                <Button size="sm" variant="outline" onClick={() => toggle(o.id, o.active)}><Power className="size-3"/></Button>
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(o.id)}><Trash2 className="size-3"/></Button>
+              </div>
+            </div>
+          ))}
+          {opts?.length === 0 && <div className="py-6 text-center text-sm text-muted-foreground">No options yet.</div>}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
