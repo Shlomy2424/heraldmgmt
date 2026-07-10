@@ -274,10 +274,14 @@ function NewWO() {
                 <Select value={form.follow_up} onValueChange={(v) => setForm({ ...form, follow_up: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="needed">Needed</SelectItem>
+                    <SelectItem value="no">No follow-up</SelectItem>
+                    <SelectItem value="yes">Yes — follow up</SelectItem>
+                    <SelectItem value="next_week">Next week</SelectItem>
                     <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="needs_manager_review">Needs manager review</SelectItem>
+                    <SelectItem value="needs_tenant_response">Needs tenant response</SelectItem>
+                    <SelectItem value="needs_parts">Needs parts</SelectItem>
+                    <SelectItem value="needs_vendor">Needs vendor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
