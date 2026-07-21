@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Upload, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, Image as ImageIcon, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge, PriorityBadge } from "./dashboard";
 import { format } from "date-fns";
@@ -85,6 +85,15 @@ function WODetail() {
   const { data: history } = useQuery({
     queryKey: ["status-history", id],
     queryFn: async () => (await supabase.from("status_history").select("*,profile:profiles(name)").eq("work_order_id", id).order("created_at", { ascending: false })).data ?? [],
+  });
+  const { data: followUps } = useQuery({
+    queryKey: ["follow-up-events", id],
+    queryFn: async () =>
+      (await supabase
+        .from("follow_up_events")
+        .select("id,follow_up,follow_up_date,follow_up_notes,changed_by,created_at,changer:profiles!follow_up_events_changed_by_fkey(name)")
+        .eq("work_order_id", id)
+        .order("created_at", { ascending: false })).data ?? [],
   });
   const { data: techs } = useQuery({
     queryKey: ["techs"],
