@@ -28,13 +28,14 @@ export const Route = createFileRoute("/_authenticated/work-orders/")({
   component: WorkOrdersPage,
 });
 
-type SortKey = "job_number"|"title"|"priority"|"status"|"created_at"|"due_at"|"scheduled_date"|"job_type"|"creator";
+type SortKey = "job_number"|"title"|"priority"|"status"|"created_at"|"due_at"|"job_type"|"creator";
 
 function WorkOrdersPage() {
   const nav = useNavigate();
   const search = Route.useSearch();
   const { hasRole } = useAuth();
   const isAdmin = hasRole(["admin"]);
+  const canCreate = hasRole(["admin", "manager", "technician"]);
   const [q, setQ] = useState(search.q);
   const [statusFilter, setStatusFilter] = useState(search.status);
   const [priorityFilter, setPriorityFilter] = useState(search.priority);
@@ -76,7 +77,7 @@ function WorkOrdersPage() {
     queryFn: async () => {
       let query = supabase
         .from("work_orders")
-        .select("id,job_number,title,status,priority,job_type,created_at,closed_at,due_at,scheduled_date,assigned_to,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name),assignee:profiles!work_orders_assigned_to_fkey(name),creator:profiles!work_orders_created_by_fkey(name)")
+        .select("id,job_number,title,status,priority,job_type,created_at,closed_at,due_at,assigned_to,property:properties(property_name),unit:units(unit_number),tenant:tenants(tenant_name),assignee:profiles!work_orders_assigned_to_fkey(name),creator:profiles!work_orders_created_by_fkey(name),visits:schedule_visits(scheduled_date)")
         .order("created_at", { ascending: false })
         .limit(500);
       if (statusFilter === "open") query = query.not("status", "in", "(closed,cancelled)");
@@ -98,15 +99,19 @@ function WorkOrdersPage() {
   });
 
   const priOrder: Record<string, number> = { emergency: 0, high: 1, normal: 2, low: 3 };
+  const withVisit = useMemo(() => (data ?? []).map((w: any) => {
+    const dates = (w.visits ?? []).map((v: any) => v.scheduled_date).filter(Boolean).sort();
+    return { ...w, next_visit: dates[0] ?? null };
+  }), [data]);
+
   const sorted = useMemo(() => {
-    const arr = [...(data ?? [])];
+    const arr = [...withVisit];
     arr.sort((a: any, b: any) => {
       let av: any, bv: any;
       switch (sortKey) {
         case "priority": av = priOrder[a.priority] ?? 9; bv = priOrder[b.priority] ?? 9; break;
         case "creator": av = a.creator?.name ?? ""; bv = b.creator?.name ?? ""; break;
         case "due_at":
-        case "scheduled_date":
         case "created_at":
           av = a[sortKey] ? new Date(a[sortKey]).getTime() : 0;
           bv = b[sortKey] ? new Date(b[sortKey]).getTime() : 0;
@@ -118,7 +123,7 @@ function WorkOrdersPage() {
       return 0;
     });
     return arr;
-  }, [data, sortKey, sortDir]);
+  }, [withVisit, sortKey, sortDir]);
 
   function toggleSort(k: SortKey) {
     if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -148,9 +153,11 @@ function WorkOrdersPage() {
           <h1 className="text-3xl">Work Orders</h1>
           <p className="text-sm text-muted-foreground">{data?.length ?? 0} results</p>
         </div>
-        <Button onClick={() => nav({ to: "/work-orders/new", search: { property_id: "", unit_id: "", tenant_id: "" } as any })}>
-          <Plus className="size-4 mr-1" /> New Work Order
-        </Button>
+        {canCreate && (
+          <Button onClick={() => nav({ to: "/work-orders/new", search: { property_id: "", unit_id: "", tenant_id: "" } as any })}>
+            <Plus className="size-4 mr-1" /> New Work Order
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -224,7 +231,7 @@ function WorkOrdersPage() {
                 <SortTh k="job_type" label="Type" className="hidden md:table-cell"/>
                 <SortTh k="priority" label="Priority"/>
                 <SortTh k="status" label="Status"/>
-                <SortTh k="scheduled_date" label="Visit" className="hidden lg:table-cell"/>
+                <th className="text-left px-4 py-3 hidden lg:table-cell">Next visit</th>
                 <SortTh k="due_at" label="Due" className="hidden lg:table-cell"/>
                 <SortTh k="created_at" label="Created" className="hidden sm:table-cell"/>
                 {isAdmin && <SortTh k="creator" label="Created by" className="hidden lg:table-cell"/>}
@@ -242,7 +249,7 @@ function WorkOrdersPage() {
                   <td className="px-4 py-3 hidden md:table-cell text-xs">{w.job_type ?? "—"}</td>
                   <td className="px-4 py-3"><PriorityBadge p={w.priority} /></td>
                   <td className="px-4 py-3"><StatusBadge s={w.status} /></td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">{w.scheduled_date ? format(new Date(w.scheduled_date), "MMM d") : "—"}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">{w.next_visit ? format(new Date(w.next_visit), "MMM d") : "—"}</td>
                   <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">{w.due_at ? format(new Date(w.due_at), "MMM d") : "—"}</td>
                   <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground">{format(new Date(w.created_at), "MMM d, yyyy")}</td>
                   {isAdmin && <td className="px-4 py-3 hidden lg:table-cell text-xs">{w.creator?.name ?? "—"}</td>}
