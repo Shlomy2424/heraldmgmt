@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ntpqrfnrwvhxqmcwwebe.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "herald-property-management",
+      "version": "0.1.0",
+      "title": "Herald Property Management"
+    },
+    "tools": [
+      {
+        "name": "list_work_orders",
+        "title": "List work orders",
+        "description": "List work orders visible to the signed-in user, optionally filtered by status, priority, or assigned technician. Returns the most recently updated records.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "Filter by work order status.",
+              "type": "string",
+              "enum": [
+                "new",
+                "in_progress",
+                "on_hold",
+                "closed",
+                "cancelled",
+                "reopened"
+              ]
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "urgent"
+              ]
+            },
+            "assigned_to_me": {
+              "description": "Only return work orders assigned to the current user.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Maximum rows to return (default 25).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_work_order",
+        "title": "Get work order",
+        "description": "Fetch a single work order with its job notes. Accepts either the work order UUID or the human-readable job number (e.g. WO-00042).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id_or_job_number": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Work order UUID or job number like WO-00042."
+            }
+          },
+          "required": [
+            "id_or_job_number"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_work_order",
+        "title": "Create work order",
+        "description": "Create a new work order in Herald Property Management. Requires job_type and title. Job number is generated automatically.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Short summary of the maintenance job."
+            },
+            "job_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Job type / category, e.g. Plumbing, HVAC, Electrical."
+            },
+            "task_description": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "urgent"
+              ]
+            },
+            "property_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "unit_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "tenant_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "due_at": {
+              "description": "ISO timestamp for the due date.",
+              "type": "string"
+            },
+            "estimated_hours": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "title",
+            "job_type"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_properties",
+        "title": "List properties",
+        "description": "List properties visible to the signed-in user, optionally filtered by a text search on name or address.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_units",
+        "title": "List units",
+        "description": "List units, optionally filtered by property.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "property_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "search": {
+              "description": "Text search on unit label.",
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_tenants",
+        "title": "List tenants",
+        "description": "List tenants visible to the signed-in user. Technicians only see tenants tied to their assigned open work orders (RLS enforced).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "unit_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "search": {
+              "description": "Text search on tenant name or email.",
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_job_note",
+        "title": "Add job note",
+        "description": "Add a note to an existing work order.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "work_order_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1
+            },
+            "visibility": {
+              "description": "Default is internal.",
+              "type": "string",
+              "enum": [
+                "internal",
+                "tenant"
+              ]
+            }
+          },
+          "required": [
+            "work_order_id",
+            "body"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
