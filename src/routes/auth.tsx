@@ -11,7 +11,17 @@ import { Building2 } from "lucide-react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 
-const authSearchSchema = z.object({ inactive: fallback(z.string(), "").default("") });
+const authSearchSchema = z.object({
+  inactive: fallback(z.string(), "").default(""),
+  next: fallback(z.string(), "").default(""),
+});
+
+function safeNext(next: string, fallbackTo: string): string {
+  if (!next) return fallbackTo;
+  // Only allow same-origin relative paths.
+  if (!next.startsWith("/") || next.startsWith("//")) return fallbackTo;
+  return next;
+}
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -22,21 +32,23 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const nav = useNavigate();
-  const { inactive } = Route.useSearch();
+  const { inactive, next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const returnTo = safeNext(next, "/dashboard");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         supabase.rpc("ensure_user_active").then(async ({ data: active }) => {
-          if (active) nav({ to: "/dashboard" });
+          if (active) window.location.href = returnTo;
           else await supabase.auth.signOut();
         });
       }
     });
-  }, [nav]);
+  }, [nav, returnTo]);
 
   useEffect(() => {
     if (inactive === "1") toast.error("This user has been deactivated. Contact an administrator.");
@@ -53,7 +65,7 @@ function AuthPage() {
         await supabase.auth.signOut();
         throw new Error("This user has been deactivated. Contact an administrator.");
       }
-      nav({ to: "/dashboard" });
+      window.location.href = returnTo;
     } catch (err: any) {
       toast.error(err.message ?? "Sign-in failed");
     } finally {
@@ -63,7 +75,11 @@ function AuthPage() {
 
   async function google() {
     setBusy(true);
-    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const redirect_uri =
+      returnTo === "/dashboard"
+        ? window.location.origin
+        : `${window.location.origin}${returnTo}`;
+    const res = await lovable.auth.signInWithOAuth("google", { redirect_uri });
     if ((res as any).error) toast.error("Google sign-in failed");
     setBusy(false);
   }
