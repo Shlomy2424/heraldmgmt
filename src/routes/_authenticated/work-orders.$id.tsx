@@ -88,12 +88,21 @@ function WODetail() {
   });
   const { data: followUps } = useQuery({
     queryKey: ["follow-up-events", id],
-    queryFn: async () =>
-      (await supabase
+    queryFn: async () => {
+      const { data } = await supabase
         .from("follow_up_events")
-        .select("id,follow_up,follow_up_date,follow_up_notes,changed_by,created_at,changer:profiles!follow_up_events_changed_by_fkey(name)")
+        .select("id,follow_up,follow_up_date,follow_up_notes,changed_by,created_at")
         .eq("work_order_id", id)
-        .order("created_at", { ascending: false })).data ?? [],
+        .order("created_at", { ascending: false });
+      const rows = data ?? [];
+      const ids = [...new Set(rows.map((r) => r.changed_by).filter(Boolean) as string[])];
+      let names = new Map<string, string>();
+      if (ids.length) {
+        const { data: profs } = await supabase.from("profiles").select("id,name").in("id", ids);
+        (profs ?? []).forEach((p) => names.set(p.id, p.name ?? ""));
+      }
+      return rows.map((r) => ({ ...r, changer_name: r.changed_by ? names.get(r.changed_by) ?? "Unknown" : "System" }));
+    },
   });
   const { data: techs } = useQuery({
     queryKey: ["techs"],
