@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -24,6 +25,8 @@ import { Route as AuthenticatedImportExportRouteImport } from './routes/_authent
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin-settings'
 import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated/activity'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedWorkOrdersIndexRouteImport } from './routes/_authenticated/work-orders.index'
 import { Route as AuthenticatedUnitsIndexRouteImport } from './routes/_authenticated/units.index'
 import { Route as AuthenticatedTenantsIndexRouteImport } from './routes/_authenticated/tenants.index'
@@ -34,6 +37,8 @@ import { Route as AuthenticatedWorkOrdersIdRouteImport } from './routes/_authent
 import { Route as AuthenticatedUnitsIdRouteImport } from './routes/_authenticated/units.$id'
 import { Route as AuthenticatedTenantsIdRouteImport } from './routes/_authenticated/tenants.$id'
 import { Route as AuthenticatedPropertiesIdRouteImport } from './routes/_authenticated/properties.$id'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -46,6 +51,11 @@ const UnsubscribeRoute = UnsubscribeRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -114,6 +124,18 @@ const AuthenticatedActivityRoute = AuthenticatedActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedWorkOrdersIndexRoute =
   AuthenticatedWorkOrdersIndexRouteImport.update({
     id: '/work-orders/',
@@ -170,6 +192,17 @@ const AuthenticatedPropertiesIdRoute =
     path: '/properties/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -193,8 +226,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/activity': typeof AuthenticatedActivityRoute
   '/admin-settings': typeof AuthenticatedAdminSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -204,6 +240,8 @@ export interface FileRoutesByFullPath {
   '/technician': typeof AuthenticatedTechnicianRoute
   '/users': typeof AuthenticatedUsersRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/tenants/$id': typeof AuthenticatedTenantsIdRoute
   '/units/$id': typeof AuthenticatedUnitsIdRoute
@@ -222,8 +260,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/activity': typeof AuthenticatedActivityRoute
   '/admin-settings': typeof AuthenticatedAdminSettingsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -233,6 +274,8 @@ export interface FileRoutesByTo {
   '/technician': typeof AuthenticatedTechnicianRoute
   '/users': typeof AuthenticatedUsersRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/tenants/$id': typeof AuthenticatedTenantsIdRoute
   '/units/$id': typeof AuthenticatedUnitsIdRoute
@@ -253,8 +296,11 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/accept-invite': typeof AcceptInviteRoute
   '/auth': typeof AuthRoute
+  '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/activity': typeof AuthenticatedActivityRoute
   '/_authenticated/admin-settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -264,6 +310,8 @@ export interface FileRoutesById {
   '/_authenticated/technician': typeof AuthenticatedTechnicianRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/properties/$id': typeof AuthenticatedPropertiesIdRoute
   '/_authenticated/tenants/$id': typeof AuthenticatedTenantsIdRoute
   '/_authenticated/units/$id': typeof AuthenticatedUnitsIdRoute
@@ -284,8 +332,11 @@ export interface FileRouteTypes {
     | '/'
     | '/accept-invite'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
     | '/unsubscribe'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/activity'
     | '/admin-settings'
     | '/dashboard'
@@ -295,6 +346,8 @@ export interface FileRouteTypes {
     | '/technician'
     | '/users'
     | '/email/unsubscribe'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/properties/$id'
     | '/tenants/$id'
     | '/units/$id'
@@ -313,8 +366,11 @@ export interface FileRouteTypes {
     | '/'
     | '/accept-invite'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
     | '/unsubscribe'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/activity'
     | '/admin-settings'
     | '/dashboard'
@@ -324,6 +380,8 @@ export interface FileRouteTypes {
     | '/technician'
     | '/users'
     | '/email/unsubscribe'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/properties/$id'
     | '/tenants/$id'
     | '/units/$id'
@@ -343,8 +401,11 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/accept-invite'
     | '/auth'
+    | '/mcp'
     | '/reset-password'
     | '/unsubscribe'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/activity'
     | '/_authenticated/admin-settings'
     | '/_authenticated/dashboard'
@@ -354,6 +415,8 @@ export interface FileRouteTypes {
     | '/_authenticated/technician'
     | '/_authenticated/users'
     | '/email/unsubscribe'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/properties/$id'
     | '/_authenticated/tenants/$id'
     | '/_authenticated/units/$id'
@@ -374,9 +437,14 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AcceptInviteRoute: typeof AcceptInviteRoute
   AuthRoute: typeof AuthRoute
+  McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -397,6 +465,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -490,6 +565,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedActivityRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/work-orders/': {
       id: '/_authenticated/work-orders/'
       path: '/work-orders'
@@ -559,6 +648,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/properties/$id'
       preLoaderRoute: typeof AuthenticatedPropertiesIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
@@ -632,9 +735,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AcceptInviteRoute: AcceptInviteRoute,
   AuthRoute: AuthRoute,
+  McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   UnsubscribeRoute: UnsubscribeRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
