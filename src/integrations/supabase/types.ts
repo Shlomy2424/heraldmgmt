@@ -256,6 +256,44 @@ export type Database = {
         }
         Relationships: []
       }
+      follow_up_events: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          follow_up: Database["public"]["Enums"]["follow_up_status"]
+          follow_up_date: string | null
+          follow_up_notes: string | null
+          id: string
+          work_order_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          follow_up: Database["public"]["Enums"]["follow_up_status"]
+          follow_up_date?: string | null
+          follow_up_notes?: string | null
+          id?: string
+          work_order_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          follow_up?: Database["public"]["Enums"]["follow_up_status"]
+          follow_up_date?: string | null
+          follow_up_notes?: string | null
+          id?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_events_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_batches: {
         Row: {
           created_at: string
