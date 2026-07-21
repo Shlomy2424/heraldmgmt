@@ -295,7 +295,7 @@ function WODetail() {
               <Row label="Tenant" value={wo.tenant?.tenant_name ?? "—"}/>
               <Row label="Tenant phone" value={wo.tenant?.phone ?? "—"}/>
               <Row label="Category" value={wo.category ?? "—"}/>
-              <Row label="Job type" value={wo.job_type ?? "—"}/>
+              <Row label="Job type" value={(wo.job_type ?? "—").replace(/_/g," ")}/>
               <Row label="Due" value={wo.due_at ? format(new Date(wo.due_at), "MMM d, yyyy h:mm a") : "—"}/>
               <Row label="Estimated hours" value={wo.estimated_hours != null ? String(wo.estimated_hours) : "—"}/>
               <Row label="Actual hours" value={wo.actual_hours != null ? String(wo.actual_hours) : "—"}/>
@@ -320,7 +320,20 @@ function WODetail() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>History</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Follow-up history</CardTitle></CardHeader>
+            <CardContent className="text-xs">
+              {(followUps ?? []).length === 0 ? (
+                <div className="text-muted-foreground text-center py-2">No follow-up entries yet.</div>
+              ) : (
+                <ul className="divide-y">
+                  {(followUps ?? []).map((f: any) => <FollowUpItem key={f.id} f={f}/>)}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Status history</CardTitle></CardHeader>
             <CardContent className="text-xs space-y-2">
               {(history ?? []).map((h: any) => (
                 <div key={h.id} className="flex justify-between gap-2">
@@ -330,6 +343,7 @@ function WODetail() {
                   <span className="text-muted-foreground whitespace-nowrap">{format(new Date(h.created_at), "MMM d")}</span>
                 </div>
               ))}
+              {history?.length === 0 && <div className="text-muted-foreground text-center py-2">No status changes yet.</div>}
             </CardContent>
           </Card>
         </div>
@@ -340,4 +354,36 @@ function WODetail() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between gap-2"><span className="text-muted-foreground">{label}</span><span className="text-right">{value}</span></div>;
+}
+
+function FollowUpItem({ f }: { f: any }) {
+  const [open, setOpen] = useState(false);
+  const label = (f.follow_up ?? "no").replace(/_/g, " ");
+  return (
+    <li className="py-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 hover:bg-muted/40 rounded px-1 py-1 text-left"
+      >
+        <span className="flex items-center gap-1.5 min-w-0">
+          {open ? <ChevronDown className="size-3 shrink-0"/> : <ChevronRight className="size-3 shrink-0"/>}
+          <span className="font-medium truncate">{label}</span>
+        </span>
+        <span className="text-muted-foreground whitespace-nowrap text-[11px]">{format(new Date(f.created_at), "MMM d, yyyy h:mm a")}</span>
+      </button>
+      {open && (
+        <div className="pl-5 pt-1.5 space-y-1 text-[12px]">
+          <div><span className="text-muted-foreground">Logged by: </span><b>{f.changer_name}</b></div>
+          <div><span className="text-muted-foreground">Follow-up: </span>{label}</div>
+          <div><span className="text-muted-foreground">Follow-up date: </span>{f.follow_up_date ? format(new Date(f.follow_up_date), "MMM d, yyyy") : "—"}</div>
+          {f.follow_up_notes ? (
+            <div><div className="text-muted-foreground">Notes:</div><p className="whitespace-pre-wrap">{f.follow_up_notes}</p></div>
+          ) : (
+            <div><span className="text-muted-foreground">Notes: </span>—</div>
+          )}
+        </div>
+      )}
+    </li>
+  );
 }
