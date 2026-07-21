@@ -22,12 +22,16 @@ export const Route = createFileRoute("/_authenticated/work-orders/new")({
   component: NewWO,
 });
 
-const JOB_TYPES = ["electrical", "plumbing", "hvac", "general", "outsourced", "other"];
+const JOB_TYPES: { value: string; label: string }[] = [
+  { value: "in_house", label: "In House" },
+  { value: "outsourced", label: "Outsourced" },
+];
 
 function NewWO() {
   const nav = useNavigate();
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, loading: authLoading } = useAuth();
   const isAdmin = hasRole(["admin"]);
+  const canCreate = hasRole(["admin", "manager", "technician"]);
   const initial = Route.useSearch();
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -105,6 +109,10 @@ function NewWO() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user?.id) { toast.error("Not signed in"); return; }
+    if (!canCreate) {
+      toast.error("Your role does not allow creating work orders. Contact an administrator.");
+      return;
+    }
     if (!form.job_type) { toast.error("Job type is required"); return; }
     setBusy(true);
     try {
@@ -135,7 +143,9 @@ function NewWO() {
       const { data: wo, error } = await supabase.from("work_orders").insert(payload).select("id,job_number").single();
       if (error) throw error;
 
-      // Create schedule_visits row if scheduled
+      // Create schedule_visits row if scheduled — surface any failure to the user
+      // instead of swallowing it. Roll back the work order so the record isn't
+      // left inconsistent, then throw the actual error.
       if (form.scheduled_date) {
         const { error: svErr } = await supabase.from("schedule_visits").insert({
           work_order_id: wo.id,
@@ -145,7 +155,12 @@ function NewWO() {
           assigned_to: form.assigned_to || null,
           created_by: user.id,
         });
-        if (svErr) console.error("schedule_visits insert failed", svErr);
+        if (svErr) {
+          console.error("schedule_visits insert failed", svErr);
+          // Try to remove the just-created work order so the user can retry cleanly.
+          await supabase.from("work_orders").delete().eq("id", wo.id);
+          throw new Error(`Couldn't save the calendar entry: ${svErr.message}. Work order was not created — please try again.`);
+        }
       }
 
       // Upload photos
@@ -163,8 +178,22 @@ function NewWO() {
       toast.success(`Created ${wo.job_number}`);
       nav({ to: "/work-orders/$id", params: { id: wo.id } });
     } catch (err: any) {
-      toast.error(err.message ?? "Failed");
+      toast.error(err.message ?? "Failed to create work order");
     } finally { setBusy(false); }
+  }
+
+  if (!authLoading && !canCreate) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardHeader><CardTitle>Not allowed</CardTitle></CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Your role doesn't allow creating work orders. Ask an administrator to grant you technician, manager, or admin access.
+            <div className="mt-3"><Button variant="outline" onClick={() => nav({ to: "/work-orders" })}>Back to Work Orders</Button></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -194,10 +223,10 @@ function NewWO() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5"><Label>Job type</Label>
+              <div className="space-y-1.5"><Label>Job type *</Label>
                 <Select value={form.job_type} onValueChange={(v) => setForm({ ...form, job_type: v })}>
                   <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
-                  <SelectContent>{JOB_TYPES.map((j) => <SelectItem key={j} value={j}>{j}</SelectItem>)}</SelectContent>
+                  <SelectContent>{JOB_TYPES.map((j) => <SelectItem key={j.value} value={j.value}>{j.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5"><Label>Category</Label>
